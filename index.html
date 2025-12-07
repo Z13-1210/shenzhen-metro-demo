@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>深圳地铁客流模拟系统</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统</h1>
+        <p class="subtitle">基于原生JavaScript开发的可视化项目 | 数据更新时间: <span id="update-time">--:--:--</span></p>
+    </header>
+
+    <main>
+        <aside class="sidebar">
+            <section class="card">
+                <h2><i class="fas fa-list"></i> 地铁线路</h2>
+                <div id="line-list"></div>
+            </section>
+            <section class="card">
+                <h2><i class="fas fa-search"></i> 站点搜索</h2>
+                <input type="text" id="search-input" placeholder="输入站点名称...">
+                <div id="search-results"></div>
+            </section>
+        </aside>
+
+        <section class="main-content">
+            <div class="card">
+                <h2><i class="fas fa-map-marked-alt"></i> 线路站点详情</h2>
+                <div id="station-list"></div>
+            </div>
+            <div class="card">
+                <h2><i class="fas fa-chart-line"></i> 客流热力图</h2>
+                <canvas id="heatmap-canvas" width="800" height="300"></canvas>
+                <div class="legend">
+                    <span class="legend-item"><span class="color-box" style="background:#2E8B57;"></span> 畅通</span>
+                    <span class="legend-item"><span class="color-box" style="background:#FFD700;"></span> 繁忙</span>
+                    <span class="legend-item"><span class="color-box" style="background:#DC143C;"></span> 拥堵</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2025 深圳地铁模拟项目 | 数据仅供参考 | 更新于 <span id="current-year">2025</span></p>
+    </footer>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>

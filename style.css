@@ -1,0 +1,190 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(
+            135deg,         /* 渐变角度：135度（左下到右上） */
+            #f5f7fa 0%,     /* 起点颜色：淡灰色，从0%位置开始 */
+            #c3cfe2 100%    /* 终点颜色：灰蓝色，到100%位置结束 */
+    );
+    color: #333;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid #0078D7;
+}
+
+header h1 {
+    color: #0078D7;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 1rem;
+}
+
+/* 主布局 */
+main {
+    display: flex;
+    gap: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.sidebar {
+    flex: 1;    /* 所有项目等宽 */
+    min-width: 300px;
+}
+
+.main-content {
+    flex: 2;
+    min-width: 500px;
+}
+
+/* 卡片样式 */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card h2 {
+    color: #2C3E50;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 线路列表 */
+#line-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.line-item {
+    background: #0078D7;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+    flex-grow: 1;
+    min-width: 100px;
+}
+
+.line-item:hover {
+    background: #005A9E;
+    transform: scale(1.05);
+}
+
+.line-item.active {
+    background: #FF5722;
+    box-shadow: 0 0 0 3px rgba(255,87,34,0.3);
+}
+
+/* 搜索框 */
+#search-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    transition: border 0.3s;
+}
+
+#search-input:focus {
+    border-color: #0078D7;
+    outline: none;
+}
+
+/* 站点列表 */
+#station-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));   /*自动填充列，每列最小150px，最大等分剩余空间*/
+    gap: 12px;
+}
+
+.station-item {
+    background: #F8F9FA;
+    border-left: 4px solid #0078D7;
+    padding: 12px;
+    border-radius: 6px;
+    transition: all 0.3s;
+}
+
+.station-item:hover {
+    background: #E3F2FD;
+    transform: translateX(5px);
+}
+
+/* 热力图 */
+#heatmap-canvas {
+    width: 100%;
+    height: 300px;
+    background: #F8F9FA;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 15px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.color-box {
+    width: 15px;
+    height: 15px;
+    border-radius: 3px;
+}
+
+/* 页脚 */
+footer {
+    text-align: center;
+    margin-top: 40px;
+    color: #666;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+    main {
+        flex-direction: column;
+    }
+
+    .sidebar, .main-content {
+        min-width: 100%;
+    }
+}
