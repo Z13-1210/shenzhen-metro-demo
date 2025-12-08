@@ -2,32 +2,32 @@
  * 主入口文件
  * 职责：初始化应用，协调各模块
  */
-import { loadLinesData } from './modules/dataLoader.js';
-import { renderLineList } from './modules/lineList.js';
-import { renderStationList } from './modules/stationList.js';
+import {loadLinesData} from './modules/dataLoader.js'
+import {renderLineList} from './modules/lineList.js'
+import {renderStationList} from './modules/stationList.js'
 
 // 应用状态
 let currentLines = [];
-let currentSelectedLine = null;
+let currentSelectedLine = null;     //在用户做出选择之前，没有任何一条线路被选中。
 
 // 初始化函数
-async function initApp() {
+async function initApp() {          //函数里用了 await 这个函数就必须要加 async
     console.log('正在初始化深圳地铁应用...');
 
-    // 1. 更新时间显示
+    // 实时更新的当前时间
     updateTime();
 
-    // 2. 加载线路数据
+    // 加载线路数据
     currentLines = await loadLinesData();
 
     if (currentLines.length === 0) {
         document.getElementById('line-list').innerHTML =
             '<p class="error">数据加载失败，请检查网络连接或刷新页面</p>';
-        return;
+        return;     //直接结束函数
     }
 
     // 3. 渲染线路列表
-    renderLineList(currentLines, 'line-list', (selectedLine) => {
+    renderLineList(currentLines, 'line-list', (selectedLine) => {   //这个回调函数在用户点击后触发
         currentSelectedLine = selectedLine;
         // 4. 渲染站点列表
         renderStationList(selectedLine.stations, 'station-list');
@@ -46,11 +46,17 @@ async function initApp() {
 // 更新时间显示
 function updateTime() {
     const now = new Date();
-    const timeString = now.toLocaleTimeString('zh-CN');
+    const timeString = now.toLocaleTimeString('zh-CN');     //格式化为中文格式的“时:分:秒”
     document.getElementById('update-time').textContent = timeString;
 
-    // 更新年份
-    document.getElementById('current-year').textContent = now.getFullYear();
+    // 2. 更新日期部分（新增或替换原来的年份显示）
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
+    const date = now.getDate();
+    const dateString = `${year}年${month}月${date}日`; // 生成日期字符串
+    // 替换原来只显示年份的元素内容
+
+    document.getElementById('current-date').textContent = dateString;
 
     // 每秒更新一次时间
     setTimeout(updateTime, 1000);
@@ -71,11 +77,11 @@ function initSearch() {
 
     // 简单防抖函数
     let timeoutId;
-    searchInput.addEventListener('input', () => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
+    searchInput.addEventListener('input', () => {    //当用户输入时，触发监听函数
+        clearTimeout(timeoutId);                                 //清除之前的待定的，还未执行的计时器
+        timeoutId = setTimeout(() => {                   //防抖的关键，重新设置一个新的计时器
             performSearch(searchInput.value.trim());
-        }, 300);
+        }, 300);                                        //避免用户连续输入时，触发多次搜索，造成性能浪费
     });
 
     function performSearch(query) {
@@ -136,10 +142,10 @@ function initHeatmap() {
     ctx.fillStyle = 'white';
     ctx.font = 'bold 20px "Segoe UI"';
     ctx.textAlign = 'center';
-    ctx.fillText('客流热力图（模拟数据）', canvas.width/2, canvas.height/2);
+    ctx.fillText('客流热力图（模拟数据）', canvas.width / 2, canvas.height / 2);
 
     ctx.font = '16px "Segoe UI"';
-    ctx.fillText('左侧：畅通 | 中部：繁忙 | 右侧：拥堵', canvas.width/2, canvas.height/2 + 30);
+    ctx.fillText('左侧：畅通 | 中部：繁忙 | 右侧：拥堵', canvas.width / 2, canvas.height / 2 + 30);
 }
 
 // 添加一些额外的CSS到页面
