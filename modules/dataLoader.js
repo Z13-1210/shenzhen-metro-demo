@@ -17,6 +17,7 @@ export async function loadLinesData() {
         console.error('❌ 加载数据时出错：', error)
         return []
         //返回空数组，避免程序崩溃
+        //今天实现了异步函数 loadLinesData 加载地铁线路数据的功能
     }
 
 }
