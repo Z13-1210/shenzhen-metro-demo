@@ -75,27 +75,27 @@ function initSearch() {
 
     if (!searchInput) return;
 
-    // 简单防抖函数
+    // 防抖函数，避免用户连续输入时，触发多次搜索，造成性能浪费
     let timeoutId;
     searchInput.addEventListener('input', () => {    //当用户输入时，触发监听函数
-        clearTimeout(timeoutId);                                 //清除之前的待定的，还未执行的计时器
-        timeoutId = setTimeout(() => {                   //防抖的关键，重新设置一个新的计时器
+        clearTimeout(timeoutId);                                 //清除之前的待定的，还未执行的计时(如果有)
+        timeoutId = setTimeout(() => {                   //设置一个新的计时器，300毫秒后执行搜索
             performSearch(searchInput.value.trim());
-        }, 300);                                        //避免用户连续输入时，触发多次搜索，造成性能浪费
+        }, 300);
     });
 
     function performSearch(query) {
         if (!query) {
-            searchResults.innerHTML = '';
-            return;
+            searchResults.innerHTML = '';       //如果搜索框是空的，就清空搜索结果
+            return;                             // 直接结束函数
         }
 
-        // 收集所有线路的所有站点
+        //准备一个空数组，用来装所有线路的所有站点
         const allStations = [];
-        currentLines.forEach(line => {
-            line.stations.forEach(station => {
-                if (station.includes(query)) {
-                    allStations.push({
+        currentLines.forEach(line => {          //查找所有地铁线路
+            line.stations.forEach(station => {  //查找这条线路上的每个车站
+                if (station.includes(query)) {  //检查车站名是否包含用户输入的文字
+                    allStations.push({          //push() 就是往数组末尾添加新东西
                         name: station,
                         line: line.name,
                         color: line.color
@@ -109,8 +109,8 @@ function initSearch() {
             searchResults.innerHTML = `<p class="no-results">未找到包含"${query}"的站点</p>`;
         } else {
             let html = `<p class="results-count">找到 ${allStations.length} 个匹配站点</p>`;
-            allStations.forEach(item => {
-                html += `
+            allStations.forEach(item => {   //对每个找到的车站（item），都往盒子里添加一些内容
+                html += `    
                     <div class="search-result-item">
                         <span class="station-name">${item.name}</span>
                         <span class="line-badge" style="background:${item.color}">${item.line}</span>
@@ -127,31 +127,40 @@ function initHeatmap() {
     const canvas = document.getElementById('heatmap-canvas');
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d');        //ctx 相当于画笔，让我们可以在canvas上画画，这里主要是2D绘图
 
     // 绘制一个简单的渐变色背景
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    gradient.addColorStop(0, '#2E8B57');
-    gradient.addColorStop(0.5, '#FFD700');
-    gradient.addColorStop(1, '#DC143C');
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);   //创建一个从左到右的线性渐变对象。
+    //                                      0, 0：渐变起点（画布左上角）  canvas.width, 0：渐变终点（画布右上角）
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    //addColorStop主要用来定义渐变中不同位置的颜色
+    gradient.addColorStop(0, '#2E8B57');    //在渐变的最左边（位置0）添加深绿色。
+    gradient.addColorStop(0.5, '#FFD700');  //在渐变的中间（位置0.5）添加金黄色。
+    gradient.addColorStop(1, '#DC143C');    //在渐变的最右边（位置1）添加深红色。
+
+    ctx.fillStyle = gradient;                                //把画笔的填充颜色设置为刚才创建的渐变。
+    //fillRect是画一个填充颜色的矩形的方法
+    ctx.fillRect(0, 0, canvas.width, canvas.height);   //用渐变颜色画一个覆盖整个画布的矩形。
+    //0, 0：矩形左上角位置（从画布左上角开始画）,canvas.width, canvas.height：矩形的宽高（和画布一样大）
 
     // 添加文字
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = 'white';//把画笔的填充颜色改成白色(用来写文字)，这里覆盖了之前的渐变设置，只影响后面的文字绘制。
     ctx.font = 'bold 20px "Segoe UI"';
     ctx.textAlign = 'center';
+    //fillText是在画布上写文字的方法
     ctx.fillText('客流热力图（模拟数据）', canvas.width / 2, canvas.height / 2);
+    //在画布中心写第一行文字。
 
     ctx.font = '16px "Segoe UI"';
     ctx.fillText('左侧：畅通 | 中部：繁忙 | 右侧：拥堵', canvas.width / 2, canvas.height / 2 + 30);
+    //在第一行文字下面30像素的位置写第二行文字。
 }
 
 // 添加一些额外的CSS到页面
 function addDynamicStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
+    const style = document.createElement('style');      //创建一个新的 <style> 标签元素。
+    style.textContent = ` 
         .current-line {
             color: #FF5722;
             font-size: 1.8rem;
