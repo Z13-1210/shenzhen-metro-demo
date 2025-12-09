@@ -28,25 +28,24 @@ https://z13-1210.github.io/shenzhen-metro-demo/
 
 
 ## 📁 项目结构
-shenzhen-metro-demo/
-├── index.html # 主页面
-├── style.css # 样式文件
-├── main.js # 应用主入口，调度中心
-├── data/ # 静态数据
-│ └── lines.json # 深圳地铁线路与站点数据
-├── modules/ # 功能模块（高内聚、低耦合）
-│ ├── dataLoader.js # 数据加载模块
-│ ├── lineList.js # 线路列表渲染与交互模块
-│ └── stationList.js # 站点列表渲染模块
-└── README.md # 项目说明（本文档）
+shen-zhen-demo/
+├── index.html                 # 主页面
+├── style.css                  # 样式文件
+├── main.js                    # 主程序入口
+├── data/
+│   └── lines.json            # 地铁线路数据
+└── modules/                   # 功能模块
+    ├── dataLoader.js          # 数据加载器
+    ├── lineList.js           # 线路列表模块
+    └── stationList.js        # 站点列表模块
 
 ## 🤔 我通过这个项目学到了什么？
 （**这是最能打动人的部分！请用你的话写下真实体会**）
-- **工程化思维**：理解了模块化(ES Modules)如何将复杂功能拆解为 `dataLoader`, `lineList`, `stationList` 等独立、可维护的模块。
-- **核心交互原理**：掌握了事件监听、回调函数、状态管理(`currentSelectedLine`)如何协同工作，驱动单页面应用(SPA)的视图更新。
+- **工程化思维**：理解了模块化(ES Modules)如何将复杂功能拆解为 'dataLoader.js', 'lineList.js', 'stationList.js' 等独立、可维护的模块。
+- **核心交互原理**：掌握了事件监听、回调函数、状态管理('currentSelectedLine')如何协同工作，驱动单页面应用(SPA)的视图更新。
 - **性能优化实践**：在搜索功能中亲手实现了**防抖(debounce)**，理解了其避免频繁函数调用、提升性能的原理。
-- **异步编程**：深入使用 `async/await` 处理数据加载，让异步代码拥有同步代码的可读性。
-- **DOM操作**：熟练运用 `document.createElement`, `appendChild`, `innerHTML` 等API进行动态渲染。
+- **异步编程**：深入使用 'async/await' 处理数据加载，让异步代码拥有同步代码的可读性。
+- **DOM操作**：熟练运用 'document.createElement', 'appendChild', 'innerHTML' 等API进行动态渲染。
 
 ## 📝 后续计划
 - [ ] 接入真实的深圳地铁API数据
