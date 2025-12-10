@@ -14,14 +14,18 @@ export function renderLineList(lines, containerId, onLineClick) {
 
     // 为每条线路创建一个按钮
     lines.forEach( line => {
-        const lineButton = document.createElement('div');       //动态创建DOM元素
+        const lineButton = document.createElement('div');
         lineButton.className = 'line-item';
         lineButton.textContent = line.name;
         lineButton.style.backgroundColor = line.color;
 
         // 存储线路ID以便后续使用
-        lineButton.dataset.lineId = line.id;        //JavaScript中的 dataset.lineId → HTML中的 data-line-id
+        lineButton.dataset.lineId = line.id;
 
+        // 添加键盘支持，使元素可通过Tab键访问
+        lineButton.tabIndex = 0;
+        
+        // 添加点击事件监听器
         lineButton.addEventListener('click', () => {
             // 移除之前活跃的线路
             document.querySelectorAll('.line-item.active').forEach(item => {
@@ -31,8 +35,16 @@ export function renderLineList(lines, containerId, onLineClick) {
             lineButton.classList.add('active');
 
             // 触发回调函数，传递被点击的线路数据
-            if (typeof onLineClick === 'function') {        //typeof: 检查 onLineClick是否是函数类型
+            if (typeof onLineClick === 'function') {
                 onLineClick(line);
+            }
+        });
+        
+        // 添加键盘事件监听器，支持Enter键和空格键操作
+        lineButton.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                lineButton.click();
             }
         });
 
@@ -41,9 +53,9 @@ export function renderLineList(lines, containerId, onLineClick) {
 
     // 默认选中第一条线路
     if (lines.length > 0) {
-        const firstLineButton = container.querySelector('.line-item');      //querySelector 本质上就是选择找到的第一个css类
+        const firstLineButton = container.querySelector('.line-item');
         if (firstLineButton) {
-            firstLineButton.click();        // 模拟一次点击
+            firstLineButton.click();
         }
     }
 }

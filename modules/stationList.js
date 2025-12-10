@@ -22,6 +22,8 @@ export function renderStationList(stations, containerId) {
     stations.forEach((station, index) => {
         const stationElement = document.createElement('div');
         stationElement.className = 'station-item';
+        // 添加键盘支持，使元素可通过Tab键访问
+        stationElement.tabIndex = 0;
 
         // 添加站点序号
         const stationNumber = document.createElement('div');

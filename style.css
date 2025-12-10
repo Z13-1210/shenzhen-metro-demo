@@ -1,82 +1,264 @@
+/* 
+ * 重置默认样式
+ * 统一盒模型为border-box，简化布局计算
+ */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
-    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-    background: linear-gradient(
-            135deg,         /* 渐变角度：135度（左下到右上） */
-            #f5f7fa 0%,     /* 起点颜色：淡灰色，从0%位置开始 */
-            #c3cfe2 100%    /* 终点颜色：灰蓝色，到100%位置结束 */
-    );
-    color: #333;
-    line-height: 1.6;
-    min-height: 100vh;
-    padding: 20px;
+/* 
+ * CSS变量定义
+ * 定义了浅色和深色主题的颜色变量，便于统一管理和切换
+ */
+:root {
+    --primary-color: #2563eb;           /* 主色调 */
+    --secondary-color: #64748b;         /* 次要颜色 */
+    --success-color: #2E8B57;           /* 成功状态颜色 */
+    --warning-color: #FFD700;           /* 警告状态颜色 */
+    --danger-color: #DC143C;            /* 危险状态颜色 */
+    --light-bg: #f8fafc;                /* 浅色背景 */
+    --dark-bg: #0f172a;                 /* 深色背景 */
+    --light-text: #1e293b;              /* 浅色主题文字 */
+    --dark-text: #f1f5f9;               /* 深色主题文字 */
+    --panel-light-bg: #ffffff;          /* 浅色面板背景 */
+    --panel-dark-bg: #1e293b;           /* 深色面板背景 */
+    --border-radius: 12px;              /* 统一边框圆角 */
+    --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);        /* 浅色阴影 */
+    --box-shadow-dark: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);   /* 深色阴影 */
+    --transition: all 0.3s ease;        /* 统一过渡动画 */
 }
 
+/* 
+ * 基础样式
+ * 设置页面基本字体、背景和文字颜色
+ */
+body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background-color: var(--light-bg);
+    color: var(--light-text);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* 深色模式下的body样式 */
+body.dark-mode {
+    background-color: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+/* 
+ * 应用容器
+ * 限制页面最大宽度，居中显示，并使用flex布局确保页脚始终在底部
+ */
+.app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 
+ * 头部样式
+ * 包含标题和副标题的样式设置
+ */
 header {
     text-align: center;
     margin-bottom: 30px;
     padding-bottom: 20px;
-    border-bottom: 3px solid #0078D7;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* 深色模式下的头部边框样式 */
+body.dark-mode header {
+    border-bottom: 1px solid #334155;
 }
 
 header h1 {
-    color: #0078D7;
-    font-size: 2.5rem;
+    color: var(--primary-color);
+    font-size: 2.2rem;
     margin-bottom: 10px;
+    font-weight: 600;
+}
+
+/* 
+ * 头部控件区域
+ * 包含副标题和主题切换按钮的布局
+ */
+.header-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
 }
 
 .subtitle {
-    color: #666;
-    font-size: 1rem;
+    color: var(--secondary-color);
+    font-size: 0.9rem;
 }
 
-/* 主布局 */
-main {
+/* 
+ * 主题切换按钮
+ * 用于在浅色和深色模式之间切换的按钮样式
+ */
+.theme-toggle {
+    background: var(--panel-light-bg);
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
     display: flex;
-    gap: 30px;
-    max-width: 1400px;
-    margin: 0 auto;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
 }
 
-.sidebar {
-    flex: 1;    /* 所有项目等宽 */
-    min-width: 300px;
+/* 深色模式下的主题切换按钮样式 */
+body.dark-mode .theme-toggle {
+    background: var(--panel-dark-bg);
+    border: 1px solid #334155;
 }
 
-.main-content {
+.theme-toggle:hover {
+    transform: rotate(15deg);
+}
+
+.theme-toggle i {
+    font-size: 1.2rem;
+    color: var(--light-text);
+}
+
+/* 深色模式下的图标颜色 */
+body.dark-mode .theme-toggle i {
+    color: var(--dark-text);
+}
+
+/* 
+ * 主容器
+ * 包含顶部容器和热力图面板的布局
+ */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+}
+
+/* 
+ * 顶部容器
+ * 包含左右两列的布局
+ */
+.top-container {
+    display: flex;
+    gap: 20px;
+}
+
+/* 
+ * 左侧列
+ * 包含线路选择和站点搜索面板
+ */
+.left-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 
+ * 右侧列
+ * 包含线路站点详情面板
+ */
+.right-column {
     flex: 2;
-    min-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-/* 卡片样式 */
-.card {
-    background: white;
-    border-radius: 12px;
+/* 
+ * 面板样式
+ * 统一面板样式，包括背景、圆角、内边距和阴影
+ */
+.panel {
+    background: var(--panel-light-bg);
+    border-radius: var(--border-radius);
     padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-    transition: transform 0.3s ease;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
 }
 
-.card:hover {
-    transform: translateY(-5px);
+/* 深色模式下的面板样式 */
+body.dark-mode .panel {
+    background: var(--panel-dark-bg);
+    box-shadow: var(--box-shadow-dark);
 }
 
-.card h2 {
-    color: #2C3E50;
+.panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* 深色模式下的面板悬停效果 */
+body.dark-mode .panel:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+/* 
+ * 全宽面板样式
+ * 专用于热力图面板的样式
+ */
+.full-width-panel {
+    background: var(--panel-light-bg);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+}
+
+/* 深色模式下的全宽面板样式 */
+body.dark-mode .full-width-panel {
+    background: var(--panel-dark-bg);
+    box-shadow: var(--box-shadow-dark);
+}
+
+.full-width-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* 深色模式下的全宽面板悬停效果 */
+body.dark-mode .full-width-panel:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+}
+
+/* 
+ * 面板标题样式
+ * 统一面板标题的样式
+ */
+.panel h2, .full-width-panel h2 {
+    color: var(--light-text);
     margin-bottom: 15px;
     font-size: 1.3rem;
     display: flex;
     align-items: center;
     gap: 10px;
+    font-weight: 600;
 }
 
-/* 线路列表 */
+/* 深色模式下的面板标题样式 */
+body.dark-mode .panel h2, 
+body.dark-mode .full-width-panel h2 {
+    color: var(--dark-text);
+}
+
+/* 
+ * 线路列表
+ * 包含地铁线路按钮的布局
+ */
 #line-list {
     display: flex;
     flex-wrap: wrap;
@@ -84,70 +266,141 @@ main {
 }
 
 .line-item {
-    background: #0078D7;
+    background: var(--primary-color);
     color: white;
     padding: 10px 15px;
     border-radius: 20px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: var(--transition);
     text-align: center;
     flex-grow: 1;
     min-width: 100px;
+    font-size: 0.9rem;
+    border: none;
 }
 
 .line-item:hover {
-    background: #005A9E;
+    opacity: 0.9;
     transform: scale(1.05);
 }
 
 .line-item.active {
-    background: #FF5722;
-    box-shadow: 0 0 0 3px rgba(255,87,34,0.3);
+    background: #ff6b35;
+    box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.3);
 }
 
-/* 搜索框 */
+/* 
+ * 搜索框
+ * 站点搜索输入框的样式
+ */
 #search-input {
     width: 100%;
     padding: 12px;
-    border: 2px solid #ddd;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     font-size: 1rem;
     margin-bottom: 15px;
-    transition: border 0.3s;
+    transition: var(--transition);
+    background: var(--panel-light-bg);
+    color: var(--light-text);
+}
+
+/* 深色模式下的搜索框样式 */
+body.dark-mode #search-input {
+    border: 1px solid #334155;
+    background: var(--panel-dark-bg);
+    color: var(--dark-text);
 }
 
 #search-input:focus {
-    border-color: #0078D7;
+    border-color: var(--primary-color);
     outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* 站点列表 */
+/* 深色模式下的搜索框聚焦样式 */
+body.dark-mode #search-input:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+/* 
+ * 站点列表
+ * 站点信息的网格布局
+ */
 #station-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));   /*自动填充列，每列最小150px，最大等分剩余空间*/
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 12px;
 }
 
 .station-item {
-    background: #F8F9FA;
-    border-left: 4px solid #0078D7;
+    background: #f1f5f9;
     padding: 12px;
-    border-radius: 6px;
-    transition: all 0.3s;
+    border-radius: 8px;
+    transition: var(--transition);
+}
+
+/* 深色模式下的站点项样式 */
+body.dark-mode .station-item {
+    background: #334155;
 }
 
 .station-item:hover {
-    background: #E3F2FD;
+    background: #e2e8f0;
     transform: translateX(5px);
 }
 
-/* 热力图 */
+/* 深色模式下的站点项悬停样式 */
+body.dark-mode .station-item:hover {
+    background: #475569;
+}
+
+.station-number {
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+.station-name {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 5px;
+    color: var(--light-text);
+}
+
+/* 深色模式下的站点名称样式 */
+body.dark-mode .station-name {
+    color: var(--dark-text);
+}
+
+.passenger-count {
+    color: var(--secondary-color);
+    font-size: 0.85rem;
+}
+
+/* 
+ * 热力图
+ * 客流热力图相关样式
+ */
+.chart-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
 #heatmap-canvas {
     width: 100%;
     height: 300px;
-    background: #F8F9FA;
+    background: #f1f5f9;
     border-radius: 8px;
     margin-top: 10px;
+    display: block;
+}
+
+/* 深色模式下的热力图画布样式 */
+body.dark-mode #heatmap-canvas {
+    background: #334155;
 }
 
 .legend {
@@ -161,6 +414,13 @@ main {
     display: flex;
     align-items: center;
     gap: 5px;
+    font-size: 0.9rem;
+    color: var(--light-text);
+}
+
+/* 深色模式下的图例文字样式 */
+body.dark-mode .legend-item {
+    color: var(--dark-text);
 }
 
 .color-box {
@@ -169,22 +429,157 @@ main {
     border-radius: 3px;
 }
 
-/* 页脚 */
+/* 
+ * 页脚
+ * 页面底部信息区域
+ */
 footer {
     text-align: center;
     margin-top: 40px;
-    color: #666;
+    color: var(--secondary-color);
     padding-top: 20px;
-    border-top: 1px solid #ddd;
+    border-top: 1px solid #e2e8f0;
+    font-size: 0.9rem;
 }
 
-/* 响应式 */
+/* 深色模式下的页脚样式 */
+body.dark-mode footer {
+    border-top: 1px solid #334155;
+}
+
+/* 
+ * 响应式设计
+ * 针对不同屏幕尺寸的适配样式
+ */
+
+/* 平板及以下尺寸 */
 @media (max-width: 1024px) {
-    main {
+    .top-container {
         flex-direction: column;
     }
+    
+    .left-column, .right-column {
+        width: 100%;
+    }
+}
 
-    .sidebar, .main-content {
-        min-width: 100%;
+/* 中等尺寸移动设备 */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 15px;
+    }
+    
+    .header-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .panel, .full-width-panel {
+        padding: 15px;
+    }
+    
+    .panel h2, .full-width-panel h2 {
+        font-size: 1.1rem;
+    }
+    
+    #station-list {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    #heatmap-canvas {
+        height: 200px;
+    }
+}
+
+/* 小尺寸移动设备 */
+@media (max-width: 480px) {
+    .app-container {
+        padding: 10px;
+    }
+    
+    header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+    }
+    
+    header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .subtitle {
+        font-size: 0.8rem;
+    }
+    
+    .top-container {
+        gap: 15px;
+    }
+    
+    .panel, .full-width-panel {
+        padding: 12px;
+    }
+    
+    .panel h2, .full-width-panel h2 {
+        font-size: 1rem;
+        gap: 8px;
+    }
+    
+    .panel h2 i, .full-width-panel h2 i {
+        font-size: 0.9rem;
+    }
+    
+    #line-list {
+        gap: 8px;
+    }
+    
+    .line-item {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        min-width: 80px;
+    }
+    
+    #search-input {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+    
+    #station-list {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 10px;
+    }
+    
+    .station-item {
+        padding: 10px;
+    }
+    
+    .station-name {
+        font-size: 0.9rem;
+    }
+    
+    #heatmap-canvas {
+        height: 150px;
+    }
+    
+    .legend {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .legend-item {
+        font-size: 0.8rem;
+    }
+    
+    .color-box {
+        width: 12px;
+        height: 12px;
+    }
+    
+    footer {
+        margin-top: 20px;
+        padding-top: 15px;
+        font-size: 0.8rem;
     }
 }
