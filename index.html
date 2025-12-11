@@ -2,78 +2,72 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- 视口元标签，确保页面在移动设备上正确显示 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>深圳地铁客流模拟系统</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <!-- 应用容器，用于限制页面最大宽度并居中显示 -->
-    <div class="app-container">
-        <header>
-            <h1><i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统</h1>
-            <!-- 头部控件区域，包含副标题和主题切换按钮 -->
-            <div class="header-controls">
-                <p class="subtitle">基于原生JavaScript开发的可视化项目 | 数据更新时间: <span id="update-time">--:--:--</span></p>
-                <!-- 主题切换按钮，用于在浅色和深色模式之间切换 -->
-                <button id="theme-toggle" class="theme-toggle">
-                    <i class="fas fa-moon"></i>
-                </button>
-            </div>
-        </header>
+<div class="app-container">
+    <header>
+        <h1><i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统</h1>
+        <div class="header-controls">
+            <p class="subtitle">基于原生JavaScript开发的可视化项目 | 数据更新时间: <span id="update-time">--:--:--</span></p>
+            <button class="theme-toggle" id="theme-toggle">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </header>
 
-        <!-- 主内容区域 -->
-        <main class="main-container">
-            <!-- 顶部容器，包含线路选择、站点搜索和站点详情面板 -->
-            <div class="top-container">
-                <!-- 左侧列，包含线路选择和站点搜索面板 -->
-                <div class="left-column">
-                    <!-- 线路选择区域 -->
-                    <section class="panel">
-                        <h2><i class="fas fa-list"></i> 地铁线路</h2>
-                        <div id="line-list"></div>
-                    </section>
+    <main class="main-container">
+        <div class="top-container">
+            <div class="left-column">
+                <!-- 线路选择区域 -->
+                <section class="panel">
+                    <h2><i class="fas fa-list"></i> 地铁线路</h2>
+                    <div id="line-list"></div>
+                </section>
 
-                    <!-- 站点搜索区域 -->
-                    <section class="panel">
-                        <h2><i class="fas fa-search"></i> 站点搜索</h2>
-                        <input type="text" id="search-input" placeholder="输入站点名称...">
-                        <div id="search-results"></div>
-                    </section>
-                </div>
-
-                <!-- 右侧列，包含线路站点详情面板 -->
-                <div class="right-column">
-                    <!-- 线路站点详情 -->
-                    <section class="panel">
-                        <h2><i class="fas fa-map-marked-alt"></i> 线路站点详情</h2>
-                        <div id="station-list"></div>
-                    </section>
-                </div>
+                <!-- 站点搜索区域 -->
+                <section class="panel">
+                    <h2><i class="fas fa-search"></i> 站点搜索</h2>
+                    <input type="text" id="search-input" placeholder="输入站点名称...">
+                    <div id="search-results"></div>
+                </section>
             </div>
 
-            <!-- 客流热力图，独占一行显示 -->
-            <section class="panel full-width-panel">
-                <h2><i class="fas fa-chart-line"></i> 客流热力图</h2>
-                <!-- 图表容器，确保热力图正确显示 -->
-                <div class="chart-container">
-                    <canvas id="heatmap-canvas" width="800" height="300"></canvas>
-                </div>
-                <!-- 图例，说明热力图颜色含义 -->
-                <div class="legend">
-                    <span class="legend-item"><span class="color-box" style="background:#2E8B57;"></span> 畅通</span>
-                    <span class="legend-item"><span class="color-box" style="background:#FFD700;"></span> 繁忙</span>
-                    <span class="legend-item"><span class="color-box" style="background:#DC143C;"></span> 拥堵</span>
-                </div>
-            </section>
-        </main>
+            <div class="right-column">
+                <!-- 实时数据统计区域 -->
+                <!-- 这个区域将由JavaScript动态创建 -->
 
-        <footer>
-            <p>© 2025 深圳地铁模拟项目 | 数据仅供参考 | 更新于 <span id="current-date">2025</span></p>
-        </footer>
-    </div>
+                <!-- 线路站点详情 -->
+                <section class="panel">
+                    <h2><i class="fas fa-map-marked-alt"></i> 线路站点详情</h2>
+                    <div id="station-list"></div>
+                </section>
+            </div>
+        </div>
 
-    <script type="module" src="main.js"></script>
+        <!-- 客流热力图 -->
+        <section class="full-width-panel">
+            <h2><i class="fas fa-chart-line"></i> 客流热力图</h2>
+            <div class="chart-container">
+                <canvas id="heatmap-canvas" width="800" height="300"></canvas>
+            </div>
+            <div class="legend">
+                <span class="legend-item"><span class="color-box" style="background:#10b981;"></span> 畅通</span>
+                <span class="legend-item"><span class="color-box" style="background:#3b82f6;"></span> 舒适</span>
+                <span class="legend-item"><span class="color-box" style="background:#f59e0b;"></span> 繁忙</span>
+                <span class="legend-item"><span class="color-box" style="background:#ef4444;"></span> 拥挤</span>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2025 深圳地铁模拟项目 | 数据仅供参考 | 更新于 <span id="current-date">2025</span></p>
+    </footer>
+</div>
+
+<script type="module" src="main.js"></script>
 </body>
 </html>

@@ -1,100 +1,328 @@
+// main.js
+
 /**
  * 主入口文件
  * 职责：初始化应用，协调各模块
  */
-import {loadLinesData} from './modules/dataLoader.js'
-import {renderLineList} from './modules/lineList.js'
-import {renderStationList} from './modules/stationList.js'
+import { loadLinesData } from './modules/dataLoader.js'
+import { renderLineList } from './modules/lineList.js'
+import { renderStationList } from './modules/stationList.js'
+import { realtimeDataService } from './modules/realtimeData.js'
 
 // 应用状态
-let currentLines = [];                  // 存储当前加载的地铁线路数据
-let currentSelectedLine = null;         // 当前选中的地铁线路
-let isDarkMode = false;                 // 深色模式状态标识
+let currentLines = [];
+let currentSelectedLine = null;
+let realtimeData = {};
+let updateInterval = null;
+let isAppInitialized = false;
 
-/**
- * 初始化函数
- * 应用启动时执行的主要初始化操作
- */
-async function initApp() {
-    console.log('正在初始化深圳地铁应用...');
-
-    // 实时更新的当前时间
-    updateTime();
-
-    // 加载线路数据
-    currentLines = await loadLinesData();
-
-    if (currentLines.length === 0) {
-        document.getElementById('line-list').innerHTML =
-            '<p class="error">数据加载失败，请检查网络连接或刷新页面</p>';
-        return;
-    }
-
-    // 渲染线路列表
-    renderLineList(currentLines, 'line-list', (selectedLine) => {
-        currentSelectedLine = selectedLine;
-        // 渲染站点列表
-        renderStationList(selectedLine.stations, 'station-list');
-
-        // 更新页面标题
-        updatePageTitle(selectedLine.name, selectedLine.color);
+// 检查DOM是否已加载完成
+function checkDOMReady() {
+    return new Promise((resolve) => {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', resolve);
+        } else {
+            resolve();
+        }
     });
-
-    // 初始化搜索功能
-    initSearch();
-
-    // 初始化热力图
-    initHeatmap();
-
-    // 添加移动端触摸支持
-    addMobileSupport();
-
-    // 初始化深色模式切换
-    initThemeToggle();
 }
 
-/**
- * 更新时间显示
- * 实时更新页面中的时间和日期信息
- */
+// 显示加载动画
+function showLoadingScreen() {
+    // 检查是否已经存在加载屏幕
+    if (document.getElementById('loading-screen')) return;
+
+    const loadingScreen = document.createElement('div');
+    loadingScreen.id = 'loading-screen';
+    loadingScreen.innerHTML = `
+        <div class="loader"></div>
+        <div class="loading-text">正在加载深圳地铁数据...</div>
+    `;
+    document.body.appendChild(loadingScreen);
+
+    // 添加CSS动画
+    if (!document.getElementById('loader-style')) {
+        const style = document.createElement('style');
+        style.id = 'loader-style';
+        style.textContent = `
+            #loading-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: var(--dark-bg);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+                transition: opacity 0.5s ease-out;
+            }
+            
+            .loader {
+                width: 50px;
+                height: 50px;
+                border: 3px solid rgba(255,255,255,0.3);
+                border-radius: 50%;
+                border-top-color: white;
+                animation: spin 1s ease-in-out infinite;
+                margin-bottom: 20px;
+            }
+            
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+            
+            .loading-text {
+                color: white;
+                font-size: 1.2rem;
+                font-weight: 500;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// 隐藏加载动画
+function hideLoadingScreen() {
+    setTimeout(() => {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.style.opacity = '0';
+            setTimeout(() => {
+                if (loadingScreen.parentNode) {
+                    loadingScreen.parentNode.removeChild(loadingScreen);
+                }
+            }, 500);
+        }
+    }, 500);
+}
+
+// 显示错误信息
+function showErrorMessage(message) {
+    const lineList = document.getElementById('line-list');
+    if (lineList) {
+        lineList.innerHTML = `<p class="error-message">${message}</p>`;
+    }
+
+    // 添加错误信息样式
+    const style = document.createElement('style');
+    style.textContent = `
+        .error-message {
+            color: var(--danger-color);
+            text-align: center;
+            padding: 20px;
+            font-size: 1rem;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// 更新时间显示
 function updateTime() {
     const now = new Date();
     const timeString = now.toLocaleTimeString('zh-CN');
-    document.getElementById('update-time').textContent = timeString;
+    const dateString = now.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+    });
 
-    // 更新日期部分
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const date = now.getDate();
-    const dateString = `${year}年${month}月${date}日`;
-    document.getElementById('current-date').textContent = dateString;
+    const updateTimeElement = document.getElementById('update-time');
+    const currentDateElement = document.getElementById('current-date');
+
+    if (updateTimeElement) {
+        updateTimeElement.textContent = timeString;
+    }
+
+    if (currentDateElement) {
+        currentDateElement.textContent = dateString;
+    }
 
     // 每秒更新一次时间
     setTimeout(updateTime, 1000);
 }
 
-/**
- * 更新页面标题
- * 根据选中的线路更新页面标题，包括线路颜色
- * @param {string} lineName - 线路名称
- * @param {string} lineColor - 线路颜色
- */
-function updatePageTitle(lineName, lineColor) {
-    const titleElement = document.querySelector('header h1');
-    titleElement.innerHTML = `<i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统 <span class="current-line" style="color: ${lineColor}">| ${lineName}</span>`;
+// 计算总站点数
+function calculateTotalStations() {
+    if (!currentLines || currentLines.length === 0) return 0;
+
+    const uniqueStations = new Set();
+    currentLines.forEach(line => {
+        if (line.stations) {
+            line.stations.forEach(station => uniqueStations.add(station));
+        }
+    });
+
+    return uniqueStations.size;
 }
 
-/**
- * 初始化搜索功能
- * 设置站点搜索功能，包括防抖处理
- */
+// 更新指定线路的实时数据
+function updateRealtimeDataForLine(line) {
+    if (!line || !line.stations) return;
+
+    // 计算每个站点的实时数据
+    const stationsData = line.stations.map((station, index) => {
+        return realtimeDataService.calculateStationPassengers(
+            station,
+            line.name,
+            index,
+            line.stations.length
+        );
+    });
+
+    // 保存实时数据
+    realtimeData[line.id] = stationsData;
+
+    // 更新站点列表显示
+    renderStationList(line.stations, 'station-list', stationsData);
+
+    // 更新热力图
+    updateHeatmapWithRealtimeData(stationsData);
+}
+
+// 开始实时更新
+function startRealtimeUpdates() {
+    // 清除已有定时器
+    if (updateInterval) clearInterval(updateInterval);
+
+    // 每15秒更新一次数据
+    updateInterval = setInterval(() => {
+        if (currentSelectedLine) {
+            updateRealtimeDataForLine(currentSelectedLine);
+        }
+    }, 1000);
+
+    // 立即更新一次
+    if (currentSelectedLine) {
+        updateRealtimeDataForLine(currentSelectedLine);
+    }
+}
+
+// 更新热力图（基于实时数据）
+function updateHeatmapWithRealtimeData(stationsData) {
+    const canvas = document.getElementById('heatmap-canvas');
+    if (!canvas) {
+        console.warn('热力图画布元素未找到');
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        console.warn('无法获取画布上下文');
+        return;
+    }
+
+    // 清空画布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 计算平均客流
+    let avgPassengers = 500; // 默认值
+    if (stationsData && stationsData.length > 0) {
+        avgPassengers = stationsData.reduce((sum, data) => sum + data.passengers, 0) / stationsData.length;
+    }
+
+    // 创建渐变色
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+
+    // 根据平均客流调整渐变色
+    if (avgPassengers < 200) {
+        // 畅通 - 绿色为主
+        gradient.addColorStop(0, '#10b981');
+        gradient.addColorStop(0.5, '#34d399');
+        gradient.addColorStop(1, '#10b981');
+    } else if (avgPassengers < 500) {
+        // 舒适 - 蓝色为主
+        gradient.addColorStop(0, '#3b82f6');
+        gradient.addColorStop(0.5, '#60a5fa');
+        gradient.addColorStop(1, '#3b82f6');
+    } else if (avgPassengers < 1000) {
+        // 繁忙 - 黄色为主
+        gradient.addColorStop(0, '#f59e0b');
+        gradient.addColorStop(0.5, '#fbbf24');
+        gradient.addColorStop(1, '#f59e0b');
+    } else if (avgPassengers < 2000) {
+        // 拥挤 - 橙色为主
+        gradient.addColorStop(0, '#f97316');
+        gradient.addColorStop(0.5, '#fb923c');
+        gradient.addColorStop(1, '#f97316');
+    } else {
+        // 拥堵 - 红色为主
+        gradient.addColorStop(0, '#ef4444');
+        gradient.addColorStop(0.5, '#f87171');
+        gradient.addColorStop(1, '#ef4444');
+    }
+
+    // 绘制热力图背景
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 添加热力图数据点
+    if (stationsData && stationsData.length > 0) {
+        const pointRadius = 8;
+        const pointSpacing = canvas.width / (stationsData.length + 1);
+
+        stationsData.forEach((data, index) => {
+            const x = pointSpacing * (index + 1);
+            const y = canvas.height / 2;
+            const intensity = Math.min(1, data.passengers / 2000);
+
+            // 绘制数据点
+            ctx.beginPath();
+            ctx.arc(x, y, pointRadius * intensity, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + intensity * 0.7})`;
+            ctx.fill();
+
+            // 绘制数据点边框
+            ctx.beginPath();
+            ctx.arc(x, y, pointRadius * intensity, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        });
+    }
+
+    // 添加文字信息
+    const total = stationsData ? stationsData.reduce((sum, data) => sum + data.passengers, 0) : 0;
+
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 20px "Segoe UI"';
+    ctx.textAlign = 'center';
+    ctx.fillText('实时客流热力图', canvas.width / 2, 30);
+
+    ctx.font = '16px "Segoe UI"';
+    ctx.fillText(`当前线路总客流：${(total / 1000).toFixed(1)}K`, canvas.width / 2, 60);
+
+    ctx.font = '14px "Segoe UI"';
+    ctx.fillText(`数据更新时间：${new Date().toLocaleTimeString()}`, canvas.width / 2, canvas.height - 20);
+}
+
+// 更新页面标题
+function updatePageTitle(lineName, lineColor) {
+    const titleElement = document.querySelector('header h1');
+    if (titleElement) {
+        titleElement.innerHTML = `
+            <i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统 
+            <span class="current-line" style="color: ${lineColor}">| ${lineName}</span>
+        `;
+    }
+}
+
+// 初始化搜索功能
 function initSearch() {
     const searchInput = document.getElementById('search-input');
     const searchResults = document.getElementById('search-results');
 
-    if (!searchInput) return;
+    if (!searchInput) {
+        console.warn('搜索输入框未找到');
+        return;
+    }
 
-    // 防抖函数，避免用户连续输入时频繁触发搜索
     let timeoutId;
     searchInput.addEventListener('input', () => {
         clearTimeout(timeoutId);
@@ -103,31 +331,29 @@ function initSearch() {
         }, 300);
     });
 
-    /**
-     * 执行搜索操作
-     * @param {string} query - 搜索关键词
-     */
     function performSearch(query) {
+        if (!searchResults) return;
+
         if (!query) {
             searchResults.innerHTML = '';
             return;
         }
 
-        // 准备一个空数组，用来装所有线路的所有站点
         const allStations = [];
         currentLines.forEach(line => {
-            line.stations.forEach(station => {
-                if (station.includes(query)) {
-                    allStations.push({
-                        name: station,
-                        line: line.name,
-                        color: line.color
-                    });
-                }
-            });
+            if (line.stations) {
+                line.stations.forEach(station => {
+                    if (station.includes(query)) {
+                        allStations.push({
+                            name: station,
+                            line: line.name,
+                            color: line.color
+                        });
+                    }
+                });
+            }
         });
 
-        // 显示搜索结果
         if (allStations.length === 0) {
             searchResults.innerHTML = `<p class="no-results">未找到包含"${query}"的站点</p>`;
         } else {
@@ -145,69 +371,55 @@ function initSearch() {
     }
 }
 
-/**
- * 初始化热力图（简易版）
- * 绘制客流热力图
- */
-function initHeatmap() {
-    const canvas = document.getElementById('heatmap-canvas');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-
-    // 绘制一个简单的渐变色背景
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
-
-    // 定义渐变色 stops
-    gradient.addColorStop(0, '#2E8B57');    // 畅通 - 深绿色
-    gradient.addColorStop(0.5, '#FFD700');  // 繁忙 - 金黄色
-    gradient.addColorStop(1, '#DC143C');    // 拥堵 - 深红色
-
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 添加文字说明
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 20px "Segoe UI"';
-    ctx.textAlign = 'center';
-    ctx.fillText('客流热力图（模拟数据）', canvas.width / 2, canvas.height / 2);
-
-    ctx.font = '16px "Segoe UI"';
-    ctx.fillText('左侧：畅通 | 中部：繁忙 | 右侧：拥堵', canvas.width / 2, canvas.height / 2 + 30);
-}
-
-/**
- * 添加动态样式
- * 通过JavaScript动态添加一些CSS样式
- */
+// 添加动态样式
 function addDynamicStyles() {
+    if (document.getElementById('dynamic-styles')) return;
+
     const style = document.createElement('style');
-    style.textContent = ` 
-        .current-line {
-            font-size: 1.8rem;
+    style.id = 'dynamic-styles';
+    style.textContent = `
+        .current-line {     
+            padding: 5px 15px;
+            border-radius: 50px;
+            font-weight: 600;
+            margin-left: 10px;
+            backdrop-filter: blur(10px);
         }
-        .no-stations, .no-results, .error {
-            color: #999;
-            text-align: center;
-            padding: 20px;
-        }
-        .search-result-item {
-            padding: 8px 12px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .line-badge {
-            color: white;
-            padding: 2px 8px;
-            border-radius: 10px;
+        
+        .congestion-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 15px;
             font-size: 0.8rem;
+            color: white;
+            font-weight: 600;
+            margin-left: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        .results-count {
-            color: #666;
-            font-size: 0.9rem;
+        
+        .station-header {
+            display: flex;
+            align-items: center;
             margin-bottom: 10px;
+        }
+        
+        .station-details {
+            margin-top: 10px;
+        }
+        
+        .passenger-number {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+        
+        .passenger-trend {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         
         /* 移动端触摸反馈 */
@@ -227,22 +439,12 @@ function addDynamicStyles() {
                 transform: translateX(0);
             }
             
-            body.dark-mode .station-item:hover {
-                background: #334155;
-                transform: translateX(0);
-            }
-            
             .station-item:active {
                 background: #e2e8f0;
                 transform: translateX(5px);
             }
             
-            body.dark-mode .station-item:active {
-                background: #475569;
-                transform: translateX(5px);
-            }
-            
-            .panel:hover, .full-width-panel:hover {
+            .panel:hover {
                 transform: translateY(0);
             }
         }
@@ -250,66 +452,133 @@ function addDynamicStyles() {
     document.head.appendChild(style);
 }
 
-/**
- * 添加移动端支持
- * 为移动端设备添加必要的支持
- */
+// 添加移动端支持
 function addMobileSupport() {
     // 为线路按钮添加触摸支持
     document.addEventListener('touchstart', function() {}, { passive: true });
 }
 
-/**
- * 初始化主题切换
- * 设置深色模式切换功能
- */
+// 主题切换功能
 function initThemeToggle() {
     const themeToggle = document.getElementById('theme-toggle');
     if (!themeToggle) return;
 
-    // 检查用户之前是否选择了深色模式
+    // 检查本地存储的主题偏好
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
-        toggleDarkMode();
+        document.body.classList.add('dark-mode');
+        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
     }
 
     themeToggle.addEventListener('click', () => {
-        toggleDarkMode();
-        // 保存用户的选择
-        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        const isDarkMode = document.body.classList.contains('dark-mode');
+
+        if (isDarkMode) {
+            // 切换到浅色模式
+            document.body.classList.remove('dark-mode');
+            themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+            localStorage.setItem('theme', 'light');
+        } else {
+            // 切换到深色模式
+            document.body.classList.add('dark-mode');
+            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            localStorage.setItem('theme', 'dark');
+        }
     });
 }
 
-/**
- * 切换深色模式
- * 在浅色和深色模式之间切换
- */
-function toggleDarkMode() {
-    isDarkMode = !isDarkMode;
-    document.body.classList.toggle('dark-mode', isDarkMode);
-    
-    // 更新图标
-    const themeIcon = document.querySelector('#theme-toggle i');
-    if (isDarkMode) {
-        themeIcon.classList.remove('fa-moon');
-        themeIcon.classList.add('fa-sun');
-    } else {
-        themeIcon.classList.remove('fa-sun');
-        themeIcon.classList.add('fa-moon');
+// 初始化函数
+async function initApp() {
+    console.log('正在初始化深圳地铁应用...');
+
+    // 1. 显示加载动画
+    showLoadingScreen();
+
+    try {
+        // 2. 实时更新的当前时间
+        updateTime();
+
+        // 3. 加载线路数据
+        currentLines = await loadLinesData();
+
+        if (!currentLines || currentLines.length === 0) {
+            console.error('线路数据加载失败');
+            showErrorMessage('数据加载失败，请检查网络连接或刷新页面');
+            hideLoadingScreen();
+            return;
+        }
+
+        console.log(`成功加载 ${currentLines.length} 条线路数据`);
+
+        // 4. 渲染线路列表
+        renderLineList(currentLines, 'line-list', (selectedLine) => {
+            currentSelectedLine = selectedLine;
+            // 立即更新实时数据并渲染站点列表
+            updateRealtimeDataForLine(selectedLine);
+
+            // 更新页面标题
+            updatePageTitle(selectedLine.name, selectedLine.color);
+        });
+
+        // 5. 初始化搜索功能
+        initSearch();
+
+        // 6. 开始实时更新
+        startRealtimeUpdates();
+
+        // 7. 添加移动端触摸支持
+        addMobileSupport();
+
+        // 8. 设置应用状态
+        isAppInitialized = true;
+
+        // 9. 隐藏加载动画
+        hideLoadingScreen();
+
+        console.log('应用初始化完成');
+
+    } catch (error) {
+        console.error('应用初始化失败:', error);
+        showErrorMessage('应用初始化失败，请刷新页面重试');
+        hideLoadingScreen();
     }
-    
-    // 重新绘制热力图以适应主题变化
-    initHeatmap();
 }
 
 // 启动应用
-addDynamicStyles();
-initApp();
+async function startApp() {
+    try {
+        // 等待DOM加载完成
+        await checkDOMReady();
+
+        console.log('DOM加载完成，开始初始化应用');
+
+        // 初始化主题切换
+        initThemeToggle();
+
+        // 添加动态样式
+        addDynamicStyles();
+
+        // 初始化应用
+        await initApp();
+
+    } catch (error) {
+        console.error('应用启动失败:', error);
+        showErrorMessage('应用启动失败，请刷新页面重试');
+    }
+}
+
+// 启动应用
+startApp();
 
 // 将全局函数暴露给控制台，方便调试
 window.debugApp = {
     reloadData: () => initApp(),
     getCurrentLines: () => currentLines,
     getSelectedLine: () => currentSelectedLine,
-    toggleDarkMode: () => toggleDarkMode()
+    getRealtimeData: () => realtimeData,
+    getAppStatus: () => ({
+        initialized: isAppInitialized,
+        linesCount: currentLines.length,
+        selectedLine: currentSelectedLine?.name
+    })
 };

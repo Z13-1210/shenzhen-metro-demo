@@ -1,8 +1,10 @@
+// modules/stationList.js
+
 /**
  * 站点列表模块
- * 职责：渲染指定线路的站点列表
+ * 职责：渲染指定线路的站点列表，支持实时客流数据
  */
-export function renderStationList(stations, containerId) {
+export function renderStationList(stations, containerId, realtimeData = null) {
     const container = document.getElementById(containerId);
     if (!container) {
         console.error(`容器 #${containerId} 不存在`);
@@ -12,9 +14,13 @@ export function renderStationList(stations, containerId) {
     // 清空容器
     container.innerHTML = '';
 
-    // 如果没有站点，显示提示
     if (!stations || stations.length === 0) {
-        container.innerHTML = '<p class="no-stations">暂无站点数据</p>';
+        container.innerHTML = `
+            <div class="no-stations">
+                <i class="fas fa-subway"></i>
+                <p>暂无站点数据</p>
+            </div>
+        `;
         return;
     }
 
@@ -22,29 +28,52 @@ export function renderStationList(stations, containerId) {
     stations.forEach((station, index) => {
         const stationElement = document.createElement('div');
         stationElement.className = 'station-item';
-        // 添加键盘支持，使元素可通过Tab键访问
         stationElement.tabIndex = 0;
 
-        // 添加站点序号
-        const stationNumber = document.createElement('div');
-        stationNumber.className = 'station-number';
-        stationNumber.textContent = `${index + 1}`;
+        // 如果有实时数据，使用实时数据，否则使用随机模拟
+        let passengers, congestion;
+        if (realtimeData && realtimeData[index]) {
+            passengers = realtimeData[index].passengers;
+            congestion = realtimeData[index].congestion;
+        } else {
+            passengers = Math.floor(Math.random() * 1000);
+            congestion = getCongestionLevel(passengers);
+        }
 
-        // 添加站点名称
-        const stationName = document.createElement('div');
-        stationName.className = 'station-name';
-        stationName.textContent = station;
+        // 计算客流百分比用于进度条
+        const passengerPercentage = Math.min(100, Math.floor((passengers / 2000) * 100));
 
-        // 添加客流模拟数据
-        const passengerCount = Math.floor(Math.random() * 1000);
-        const passengerElement = document.createElement('div');
-        passengerElement.className = 'passenger-count';
-        passengerElement.innerHTML = `<i class="fas fa-user"></i> ${passengerCount}`;
-
-        stationElement.appendChild(stationNumber);
-        stationElement.appendChild(stationName);
-        stationElement.appendChild(passengerElement);
+        stationElement.innerHTML = `
+            <div class="station-header">
+                <div class="station-number">${index + 1}</div>
+                <div class="station-name">${station}</div>
+                <div class="congestion-badge" style="background: ${congestion.color}">
+                    ${congestion.emoji} ${congestion.level}
+                </div>
+            </div>
+            <div class="station-details">
+                <div class="passenger-count">
+                    <i class="fas fa-users"></i> 
+                    <span class="passenger-number">${passengers.toLocaleString()}</span> 人
+                </div>
+                <div class="passenger-indicator">
+                    <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${congestion.color}"></div>
+                </div>
+                <div class="passenger-trend">
+                    <i class="fas fa-chart-line"></i> 趋势：${realtimeData ? realtimeData[index].trend : '稳定'}
+                </div>
+            </div>
+        `;
 
         container.appendChild(stationElement);
     });
+}
+
+// 辅助函数：根据乘客数量获取拥堵等级
+function getCongestionLevel(passengers) {
+    if (passengers < 200) return { level: '畅通', color: '#10b981', emoji: '😊' };
+    if (passengers < 500) return { level: '舒适', color: '#3b82f6', emoji: '😊' };
+    if (passengers < 1000) return { level: '繁忙', color: '#f59e0b', emoji: '😐' };
+    if (passengers < 2000) return { level: '拥挤', color: '#ef4444', emoji: '😰' };
+    return { level: '拥堵', color: '#dc2626', emoji: '😱' };
 }
