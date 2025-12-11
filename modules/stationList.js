@@ -36,7 +36,7 @@ export function renderStationList(stations, containerId, realtimeData = null) {
             passengers = realtimeData[index].passengers;
             congestion = realtimeData[index].congestion;
         } else {
-            passengers = Math.floor(Math.random() * 1000);
+            passengers = generateRealisticPassengerCount(index);
             congestion = getCongestionLevel(passengers);
         }
 
@@ -59,9 +59,7 @@ export function renderStationList(stations, containerId, realtimeData = null) {
                 <div class="passenger-indicator">
                     <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${congestion.color}"></div>
                 </div>
-                <div class="passenger-trend">
-                    <i class="fas fa-chart-line"></i> 趋势：${realtimeData ? realtimeData[index].trend : '稳定'}
-                </div>
+
             </div>
         `;
 
@@ -71,9 +69,46 @@ export function renderStationList(stations, containerId, realtimeData = null) {
 
 // 辅助函数：根据乘客数量获取拥堵等级
 function getCongestionLevel(passengers) {
-    if (passengers < 200) return { level: '畅通', color: '#10b981', emoji: '😊' };
-    if (passengers < 500) return { level: '舒适', color: '#3b82f6', emoji: '😊' };
-    if (passengers < 1000) return { level: '繁忙', color: '#f59e0b', emoji: '😐' };
-    if (passengers < 2000) return { level: '拥挤', color: '#ef4444', emoji: '😰' };
+    if (passengers < 500) return { level: '畅通', color: '#10b981', emoji: '😊' };
+    if (passengers < 1000) return { level: '舒适', color: '#3b82f6', emoji: '😊' };
+    if (passengers < 2000) return { level: '繁忙', color: '#f59e0b', emoji: '😐' };
+    if (passengers < 3000) return { level: '拥挤', color: '#ef4444', emoji: '😰' };
     return { level: '拥堵', color: '#dc2626', emoji: '😱' };
+}
+
+// 辅助函数：根据站点位置生成更真实的乘客数量
+function generateRealisticPassengerCount(stationIndex) {
+    // 基础客流量，根据站点位置调整
+    let basePassengers = 0;
+    
+    // 模拟不同类型的站点（换乘站、中心站、普通站）
+    const stationTypes = [
+        '普通站', '普通站', '普通站', '普通站', '普通站', '普通站', '普通站', '普通站',
+        '换乘站', '换乘站', '换乘站', '换乘站', '换乘站', '换乘站', '换乘站', '换乘站',
+        '中心站', '中心站', '中心站', '中心站', '中心站', '中心站', '中心站', '中心站'
+    ];
+    
+    const stationType = stationTypes[stationIndex % stationTypes.length];
+    
+    // 根据站点类型设置基础客流量
+    switch(stationType) {
+        case '普通站':
+            basePassengers = 500 + Math.floor(Math.random() * 500);
+            break;
+        case '换乘站':
+            basePassengers = 1500 + Math.floor(Math.random() * 1000);
+            break;
+        case '中心站':
+            basePassengers = 2500 + Math.floor(Math.random() * 1500);
+            break;
+    }
+    
+    // 添加时间因素，模拟早晚高峰
+    const timeFactor = 1 + (Math.sin(Date.now() / 10000) * 0.5);
+    
+    // 添加随机波动
+    const randomFactor = 1 + (Math.random() - 0.5) * 0.3;
+    
+    // 计算最终客流量
+    return Math.floor(basePassengers * timeFactor * randomFactor);
 }
