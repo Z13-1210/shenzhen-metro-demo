@@ -324,56 +324,70 @@ body.dark-mode .full-width-panel h2 {
 }
 
 .line-item {
-    color: var(--text-inverse);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: var(--radius-xl);
+    color: #000000; /* 白天模式下文字为黑色 */
+    padding: var(--spacing-md);
+    border-radius: 0; /* 无圆角 */
     cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: center;
     font-size: var(--text-sm);
     font-weight: 500;
     border: none;
     position: relative;
     overflow: hidden;
+    background: var(--light-bg);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     transform: translateY(0);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px; /* 增加按钮高度 */
 }
 
-/* 为未激活的按钮添加透明灰色蒙版 */
-.line-item:not(.active)::after {
+/* 深色模式下的线路按钮 */
+body.dark-mode .line-item {
+    background: var(--border-dark);
+    border-color: var(--border-dark);
+    color: #ffffff; /* 深色模式下文字为白色 */
+}
+
+/* 线路颜色标识线 */
+.line-item::before {
     content: '';
     position: absolute;
-    top: 0;
     left: 0;
-    right: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background-color: var(--line-color, currentColor); /* 使用自定义线路颜色，默认使用文字颜色 */
+}
+
+/* 悬停时的下划线动画效果 */
+.line-item::after {
+    content: '';
+    position: absolute;
     bottom: 0;
-    background-color: rgba(128, 128, 128, 0.5);
-    border-radius: var(--radius-xl);
-    z-index: 1;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--line-color, currentColor);
+    transition: width 0.3s ease;
+    transform-origin: left;
 }
 
-.line-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-    z-index: 1;
+.line-item:hover::after {
+    width: 100%;
 }
 
-.line-item.active {
-    opacity: 1;
-    transform: translateY(-5px);
-    z-index: 2;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+/* 选中时的下划线效果 */
+.line-item.active::after {
+    width: 100%;
+    transition: width 0.3s ease;
 }
 
-/* 深色模式下的线路按钮激活样式 */
-body.dark-mode .line-item.active {
-    box-shadow: 0 8px 16px rgba(255, 255, 255, 0.3)
-}
-
-/* 移除之前的伪元素样式 */
-.line-item::before {
-    display: none;
+/* 未选中时的下划线消失动画（从右到左） */
+.line-item:not(.active):not(:hover)::after {
+    transition: width 0.3s ease;
+    width: 0;
+    transform-origin: left;
 }
 
 /*

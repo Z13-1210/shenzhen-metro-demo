@@ -17,7 +17,8 @@ export function renderLineList(lines, containerId, onLineClick) {
         const lineButton = document.createElement('div');
         lineButton.className = 'line-item';
         lineButton.textContent = line.name;
-        lineButton.style.backgroundColor = line.color;
+        // 不再直接设置文字颜色，让CSS来控制颜色，只通过currentColor引用线路颜色
+        lineButton.style.setProperty('--line-color', line.color);
 
         // 存储线路ID以便后续使用
         lineButton.dataset.lineId = line.id;
