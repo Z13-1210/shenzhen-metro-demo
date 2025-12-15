@@ -17,11 +17,9 @@ export function renderLineList(lines, containerId, onLineClick) {
         const lineButton = document.createElement('div');
         lineButton.className = 'line-item';
         lineButton.textContent = line.name;
-        // 不再直接设置文字颜色，让CSS来控制颜色，只通过currentColor引用线路颜色
+        // 存储线路ID和颜色，供CSS使用
         lineButton.style.setProperty('--line-color', line.color);
 
-        // 存储线路ID以便后续使用
-        lineButton.dataset.lineId = line.id;
 
         // 添加键盘支持，使元素可通过Tab键访问
         lineButton.tabIndex = 0;

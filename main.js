@@ -15,6 +15,8 @@ let currentSelectedLine = null;
 let realtimeData = {};
 let updateInterval = null;
 let isAppInitialized = false;
+let currentView = 'line'; // 新增：跟踪当前视图是线路('line')还是站点('station')
+let currentDisplayedStation = null; // 新增：跟踪当前显示的站点信息
 
 // 检查DOM是否已加载完成
 function checkDOMReady() {
@@ -76,7 +78,7 @@ function showLoadingScreen() {
             
             .loading-text {
                 color: white;
-                font-size: 1.2rem;
+font-size: 1.2rem;
                 font-weight: 500;
             }
         `;
@@ -193,13 +195,13 @@ function startRealtimeUpdates() {
 
     // 每15秒更新一次数据
     updateInterval = setInterval(() => {
-        if (currentSelectedLine) {
+        if (currentSelectedLine && currentView === 'line') {
             updateRealtimeDataForLine(currentSelectedLine);
         }
     }, 1000);
 
     // 立即更新一次
-    if (currentSelectedLine) {
+    if (currentSelectedLine && currentView === 'line') {
         updateRealtimeDataForLine(currentSelectedLine);
     }
 }
@@ -286,8 +288,7 @@ function updateHeatmapWithRealtimeData(stationsData) {
             ctx.stroke();
         });
     }
-
-    // 添加文字信息
+// 添加文字信息
     const total = stationsData ? stationsData.reduce((sum, data) => sum + data.passengers, 0) : 0;
 
     ctx.fillStyle = 'white';
@@ -346,7 +347,7 @@ function initSearch() {
                     if (station.includes(query)) {
                         allStations.push({
                             name: station,
-                            line: line.name,
+                            line: line,
                             color: line.color
                         });
                     }
@@ -358,16 +359,84 @@ function initSearch() {
             searchResults.innerHTML = `<p class="no-results">未找到包含"${query}"的站点</p>`;
         } else {
             let html = `<p class="results-count">找到 ${allStations.length} 个匹配站点</p>`;
-            allStations.forEach(item => {
+            allStations.forEach((item, index) => {
                 html += `    
-                    <div class="search-result-item">
+                    <div class="search-result-item" data-index="${index}">
                         <span class="station-name">${item.name}</span>
-                        <span class="line-badge" style="background:${item.color}">${item.line}</span>
+                        <span class="line-badge" style="background:${item.color}">${item.line.name}</span>
                     </div>
                 `;
             });
             searchResults.innerHTML = html;
+
+            // 为搜索结果添加点击事件
+            const searchResultItems = searchResults.querySelectorAll('.search-result-item');
+            searchResultItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const index = parseInt(item.getAttribute('data-index'));
+                    const selectedStation = allStations[index];
+                    
+                    // 显示单个站点信息
+                    showSingleStation(selectedStation);
+                });
+            });
         }
+    }
+
+    // 显示单个站点信息的函数
+    function showSingleStation(stationInfo) {
+        const stationContainer = document.getElementById('station-list');
+        if (!stationContainer) return;
+
+        // 设置视图为单站点视图
+        currentView = 'station';
+        currentDisplayedStation = stationInfo;
+
+        // 找到该站点在线路中的索引
+        const line = stationInfo.line;
+        const stationIndex = line.stations.indexOf(stationInfo.name);
+        
+        if (stationIndex === -1) return;
+
+        // 生成该站点的实时数据
+        const stationData = realtimeDataService.calculateStationPassengers(
+            stationInfo.name,
+            line.name,
+            stationIndex,
+            line.stations.length
+        );
+
+        // 清空容器
+        stationContainer.innerHTML = '';
+
+        // 创建站点元素
+        const stationElement = document.createElement('div');
+        stationElement.className = 'station-item';
+        stationElement.tabIndex = 0;
+
+        // 计算客流百分比用于进度条
+        const passengerPercentage = Math.min(100, Math.floor((stationData.passengers / 2000) * 100));
+
+        stationElement.innerHTML = `
+            <div class="station-header">
+                <div class="station-number">${stationIndex + 1}</div>
+                <div class="station-name">${stationInfo.name}</div>
+                <div class="congestion-badge" style="background: ${stationData.congestion.color}">
+                    ${stationData.congestion.emoji} ${stationData.congestion.level}
+                </div>
+            </div>
+            <div class="station-details">
+                <div class="passenger-count">
+                    <i class="fas fa-users"></i> 
+                    <span class="passenger-number">${stationData.passengers.toLocaleString()}</span> 人
+                </div>
+                <div class="passenger-indicator">
+                    <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${stationData.congestion.color}"></div>
+                </div>
+            </div>
+        `;
+
+        stationContainer.appendChild(stationElement);
     }
 }
 
@@ -431,7 +500,7 @@ function addDynamicStyles() {
             
             .line-item:active {
                 opacity: 0.9;
-                transform: scale(1.05);
+                transform: scale(1); /* 修改这里，从1.05改为1，避免按钮放大 */
             }
             
             .station-item:hover {
@@ -510,14 +579,29 @@ async function initApp() {
 
         console.log(`成功加载 ${currentLines.length} 条线路数据`);
 
+        // 在initApp函数中修改线路列表的点击处理
         // 4. 渲染线路列表
         renderLineList(currentLines, 'line-list', (selectedLine) => {
             currentSelectedLine = selectedLine;
+            // 设置视图为线路视图
+            currentView = 'line';
             // 立即更新实时数据并渲染站点列表
             updateRealtimeDataForLine(selectedLine);
-
+        
             // 更新页面标题
             updatePageTitle(selectedLine.name, selectedLine.color);
+            
+            // 清除搜索框内容
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            // 清空搜索结果
+            const searchResults = document.getElementById('search-results');
+            if (searchResults) {
+                searchResults.innerHTML = '';
+            }
         });
 
         // 5. 初始化搜索功能

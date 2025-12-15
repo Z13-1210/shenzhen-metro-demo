@@ -155,7 +155,7 @@ export class RealtimeDataService {
      */
     calculateStationPassengers(stationName, lineName, stationIndex, totalStations) {
         // 基础客流
-        let base = 30000;
+        let base = 10000;
 
         // 时间系数
         const timeFactor = this.getTimeFactor();
