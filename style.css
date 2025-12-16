@@ -40,6 +40,7 @@
     --border-radius: 12px;
     --radius-sm: 8px;
     --radius-md: 12px;
+    --radius-lg: 16px;
 
     /* 阴影 */
     --box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -252,9 +253,9 @@ body.dark-mode .full-width-panel h2 {
     align-items: center;
     gap: 8px;
     min-height: 44px;
-    -webkit-tap-highlight-color: transparent; /* 移除移动端点击时的蓝色高亮 */
-    -webkit-touch-callout: none; /* 禁止长按弹出菜单 */
-    -webkit-user-select: none; /* 禁止文本选择 */
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -378,24 +379,6 @@ body.dark-mode .results-count {
     background: var(--border-dark);
 }
 
-/* 搜索结果项的悬停效果 */
-.search-result-item::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    z-index: -1;
-    border-radius: var(--radius-sm);
-    transition: var(--transition);
-}
-
-.search-result-item:hover::before {
-    background: rgba(37, 99, 235, 0.1);
-}
-
 /* 搜索结果的动画效果 */
 @keyframes fadeIn {
     from {
@@ -513,65 +496,199 @@ body.dark-mode .passenger-number {
     transition: width 0.5s ease-out;
 }
 
-/* 热力图 */
-.chart-container {
+/* 热力图容器 */
+.heatmap-container {
     position: relative;
     width: 100%;
+    margin-top: var(--spacing-md);
+    border-radius: var(--radius-lg);
     overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    background: white;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+}
+
+body.dark-mode .heatmap-container {
+    background: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.heatmap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.heatmap-header h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+body.dark-mode .heatmap-header h3 {
+    color: var(--text-light);
+}
+
+.heatmap-header h3 i {
+    color: #ff6b6b;
+}
+
+.heatmap-stats {
+    display: flex;
+    gap: 30px;
+    background: #f8f9fa;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+body.dark-mode .heatmap-stats {
+    background: var(--card-dark-bg);
+    border: 1px solid var(--border-dark);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+body.dark-mode .stat-label {
+    color: var(--text-light);
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #333;
+}
+
+body.dark-mode .stat-value {
+    color: var(--text-light);
 }
 
 #heatmap-canvas {
     width: 100%;
-    height: 300px;
-    background: var(--light-bg);
-    border-radius: var(--radius-md);
-    margin-top: var(--spacing-sm);
+    height: 500px;
     display: block;
+    background: transparent;
 }
 
-body.dark-mode #heatmap-canvas {
-    background: var(--border-dark);
+/* 站点提示框样式 */
+.station-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeIn 0.2s ease-out;
+    max-width: 200px;
 }
 
-.legend {
-    display: flex;
-    justify-content: center;
-    gap: var(--spacing-lg);
-    margin-top: var(--spacing-md);
-    flex-wrap: wrap;
+.tooltip-header {
+    font-weight: bold;
+    margin-bottom: 2px;
+    color: #fff;
+    font-size: 13px;
 }
 
-.legend-item {
+.tooltip-content {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+}
+
+/* 返回按钮样式 */
+.back-to-line {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: var(--primary-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 15px;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.back-to-line:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: var(--primary-color);
+}
+
+/* 特色站点样式 */
+.station-item.featured {
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.station-number.featured {
+    background: var(--primary-color);
+    color: white;
+    width: 30px;
+    height: 30px;
+    font-size: 1rem;
+}
+
+/* 站点元信息 */
+.station-meta {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    font-size: 0.9rem;
+}
+
+.station-line, .station-trend, .station-update {
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
-    font-size: var(--text-sm);
-    color: var(--text-primary);
+    gap: 6px;
+    color: rgba(255, 255, 255, 0.8);
 }
 
-body.dark-mode .legend-item {
-    color: var(--text-light);
+.trend-text {
+    color: #fbbf24;
+    font-weight: 500;
 }
 
-.color-box {
-    width: 15px;
-    height: 15px;
-    border-radius: 3px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+/* 当前站点标题样式 */
+.current-station {
+    padding: 5px 15px;
+    border-radius: 50px;
+    font-weight: 600;
+    margin-left: 10px;
 }
 
-/* 页脚 */
 footer {
     text-align: center;
-    margin-top: var(--spacing-xl);
-    color: var(--text-secondary);
-    padding-top: var(--spacing-lg);
-    border-top: 1px solid var(--border-color);
-    font-size: var(--text-sm);
-}
-
-body.dark-mode footer {
-    border-top: 1px solid var(--border-dark);
 }
 
 /* 响应式设计 */
@@ -603,17 +720,14 @@ body.dark-mode footer {
         gap: var(--spacing-sm);
     }
     #heatmap-canvas {
-        height: 200px;
+        height: 300px;
     }
-    .legend {
-        gap: var(--spacing-sm);
+    .heatmap-stats {
+        gap: 15px;
+        padding: 10px 15px;
     }
-    .legend-item {
-        font-size: var(--text-xs);
-    }
-    .color-box {
-        width: 12px;
-        height: 12px;
+    .stat-item {
+        min-width: auto;
     }
 }
 
@@ -645,7 +759,16 @@ body.dark-mode footer {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
     #heatmap-canvas {
-        height: 150px;
+        height: 250px;
+    }
+    .heatmap-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+    .heatmap-stats {
+        width: 100%;
+        justify-content: space-between;
     }
     footer {
         font-size: var(--text-xs);

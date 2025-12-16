@@ -52,14 +52,25 @@
         <!-- 客流热力图 -->
         <section class="full-width-panel" aria-labelledby="heatmap-title">
             <h2 id="heatmap-title"><i class="fas fa-chart-line"></i> 客流热力图</h2>
-            <div class="chart-container">
-                <canvas id="heatmap-canvas" width="800" height="300" aria-label="客流热力图" role="img"></canvas>
-            </div>
-            <div class="legend" aria-label="图例说明">
-                <span class="legend-item"><span class="color-box" style="background:#10b981;"></span> 畅通</span>
-                <span class="legend-item"><span class="color-box" style="background:#3b82f6;"></span> 舒适</span>
-                <span class="legend-item"><span class="color-box" style="background:#f59e0b;"></span> 繁忙</span>
-                <span class="legend-item"><span class="color-box" style="background:#ef4444;"></span> 拥挤</span>
+            <div class="heatmap-container">
+                <div class="heatmap-header">
+                    <h3><i class="fas fa-fire"></i> 实时客流热力图</h3>
+                    <div class="heatmap-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">总客流</span>
+                            <span id="total-passengers" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">平均</span>
+                            <span id="avg-passengers" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">峰值</span>
+                            <span id="peak-passengers" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+                <canvas id="heatmap-canvas" width="1200" height="500"></canvas>
             </div>
         </section>
     </main>

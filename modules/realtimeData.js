@@ -197,6 +197,18 @@ export class RealtimeDataService {
      * 判断站点类型
      */
     determineStationType(stationName, lineName) {
+        // 确保 stationName 是字符串
+        if (typeof stationName !== 'string') {
+            console.warn('stationName 不是字符串:', stationName, '类型:', typeof stationName);
+            // 如果是对象，尝试获取 name 属性
+            if (stationName && typeof stationName === 'object' && stationName.name) {
+                stationName = stationName.name;
+            } else {
+                // 否则转换为字符串
+                stationName = String(stationName);
+            }
+        }
+
         // 枢纽站判断
         const hubStations = [
             '深圳北站', '福田', '车公庙', '会展中心', '老街',
