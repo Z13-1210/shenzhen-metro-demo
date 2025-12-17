@@ -138,6 +138,8 @@ header h1 {
     align-items: center;
     justify-content: center;
     transition: var(--transition);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 body.dark-mode .theme-toggle {
@@ -158,6 +160,59 @@ body.dark-mode .theme-toggle i {
     color: var(--text-light);
 }
 
+/* 浮动工具按钮 */
+.floating-tools {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+}
+
+.tool-button {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: var(--card-light-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--box-shadow);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    color: var(--text-primary);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+body.dark-mode .tool-button {
+    background: var(--card-dark-bg);
+    border: 1px solid var(--border-dark);
+    box-shadow: var(--box-shadow-dark);
+    color: var(--text-light);
+}
+
+.tool-button:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--box-shadow-hover);
+}
+
+.tool-button i {
+    font-size: 1.2rem;
+}
+
+/* 回到顶部按钮默认隐藏 */
+.back-to-top {
+    display: none;
+}
+
+.back-to-top.visible {
+    display: flex;
+}
+
 /* 主容器 */
 .main-container {
     display: flex;
@@ -172,15 +227,16 @@ body.dark-mode .theme-toggle i {
     gap: var(--spacing-lg);
 }
 
-/* 左右列布局 */
-.left-column {
+/* 左侧边栏 */
+.sidebar {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-lg);
 }
 
-.right-column {
+/* 主内容区 */
+.main-content {
     flex: 2;
     display: flex;
     flex-direction: column;
@@ -503,15 +559,12 @@ body.dark-mode .passenger-number {
     margin-top: var(--spacing-md);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     background: white;
-    padding: 20px;
-    border: 1px solid #e9ecef;
 }
 
 body.dark-mode .heatmap-container {
     background: none;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    /*box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);*/
 }
 
 .heatmap-header {
@@ -696,7 +749,8 @@ footer {
     .top-container {
         flex-direction: column;
     }
-    .left-column, .right-column {
+    
+    .sidebar, .main-content {
         width: 100%;
     }
 }
@@ -793,5 +847,223 @@ footer {
     .panel, .full-width-panel {
         box-shadow: none;
         border: 1px solid #ddd;
+    }
+}
+
+/*!* 添加tooltip显示动画 *!*/
+/*.heatmap-tooltip {*/
+/*    animation: tooltipFadeIn 0.2s ease-out;*/
+/*}*/
+
+/*@keyframes tooltipFadeIn {*/
+/*    from {*/
+/*        opacity: 0;*/
+/*        transform: translateY(10px) scale(0.95);*/
+/*    }*/
+/*    to {*/
+/*        opacity: 1;*/
+/*        transform: translateY(0) scale(1);*/
+/*    }*/
+/*}*/
+
+/* 汉堡菜单按钮 */
+.hamburger-menu {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 1001;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hamburger-menu:hover {
+    background: var(--primary-dark);
+}
+
+/* 固定在左侧的侧边栏 */
+.fixed-sidebar {
+    position: fixed;
+    top: 0;
+    left: -320px; /* 默认隐藏在左侧 */
+    width: 320px;
+    height: 100vh;
+    background: var(--card-light-bg);
+    border-right: 1px solid var(--border-color);
+    z-index: 1002;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+}
+
+body.dark-mode .fixed-sidebar {
+    background: var(--card-dark-bg);
+    border-right-color: var(--border-dark);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.fixed-sidebar.active {
+    left: 0; /* 展开时显示 */
+}
+
+/* 侧边栏头部 */
+.sidebar-header {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--primary-color);
+    color: white;
+}
+
+body.dark-mode .sidebar-header {
+    border-bottom-color: var(--border-dark);
+}
+
+.sidebar-header h2 {
+    color: white;
+    margin: 0;
+    font-size: var(--text-lg);
+}
+
+.close-sidebar {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.close-sidebar:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+/* 侧边栏内容 */
+.sidebar-content {
+    flex: 1;
+    padding: var(--spacing-lg);
+    overflow-y: auto;
+}
+
+/* 侧边栏遮罩层 */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1001;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 侧边栏内的线路列表 */
+.fixed-sidebar #line-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.fixed-sidebar .line-item {
+    padding: var(--spacing-md);
+    min-height: 50px;
+    font-size: var(--text-base);
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+    background: var(--light-bg);
+}
+
+body.dark-mode .fixed-sidebar .line-item {
+    border-color: var(--border-dark);
+    background: var(--border-dark);
+}
+
+/* 侧边栏内的搜索框 */
+.fixed-sidebar #search-input {
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+}
+
+.fixed-sidebar #search-results {
+    max-height: 200px;
+    margin-top: 0;
+}
+
+/* 主内容区域全宽 */
+.main-content.full-width {
+    width: 100%;
+}
+
+/* 调整头部位置，为汉堡菜单留出空间 */
+header {
+    margin-left: 80px; /* 为汉堡菜单留出空间 */
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .fixed-sidebar {
+        width: 280px;
+        left: -280px;
+    }
+
+    .hamburger-menu {
+        top: 15px;
+        left: 15px;
+        width: 45px;
+        height: 45px;
+    }
+
+    header {
+        margin-left: 70px;
+    }
+
+    .sidebar-content {
+        padding: var(--spacing-md);
+    }
+}
+
+@media (max-width: 480px) {
+    .fixed-sidebar {
+        width: 100%;
+        left: -100%;
+    }
+
+    .hamburger-menu {
+        top: 10px;
+        left: 10px;
+        width: 40px;
+        height: 40px;
+    }
+
+    header {
+        margin-left: 60px;
     }
 }

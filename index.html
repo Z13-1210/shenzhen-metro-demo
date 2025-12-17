@@ -10,6 +10,43 @@
 </head>
 <body>
 <div class="app-container">
+    <!-- 汉堡菜单按钮 -->
+    <button class="hamburger-menu" id="hamburger-menu" aria-label="切换菜单">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- 固定在左侧的侧边栏 -->
+    <div class="fixed-sidebar" id="fixed-sidebar">
+        <div class="sidebar-header">
+            <h2><i class="fas fa-subway"></i>  深圳地铁</h2>
+            <button class="close-sidebar" id="close-sidebar" aria-label="关闭菜单">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="sidebar-content">
+            <!-- 线路导航部分 -->
+            <section class="sidebar-section">
+                <h3 class="sidebar-subtitle">
+                    <i class="fas fa-list"></i> 地铁线路
+                </h3>
+                <div id="line-list" role="list" aria-label="地铁线路列表"></div>
+            </section>
+
+            <!-- 搜索部分 -->
+            <section class="sidebar-section">
+                <h3 class="sidebar-subtitle" style="padding: 10px 0;">
+                    <i class="fas fa-search"></i> 站点搜索
+                </h3>
+                <input type="text" id="search-input" placeholder="输入站点名称..." aria-label="搜索站点">
+                <div id="search-results" role="list" aria-label="搜索结果"></div>
+            </section>
+        </div>
+    </div>
+
+    <!-- 侧边栏遮罩层 -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
     <header>
         <h1><i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统</h1>
         <div class="header-controls">
@@ -22,25 +59,8 @@
 
     <main class="main-container">
         <div class="top-container">
-            <div class="left-column">
-                <!-- 线路选择区域 -->
-                <section class="panel" aria-labelledby="line-list-title">
-                    <h2 id="line-list-title"><i class="fas fa-list"></i> 地铁线路</h2>
-                    <div id="line-list" role="list" aria-label="地铁线路列表"></div>
-                </section>
-
-                <!-- 站点搜索区域 -->
-                <section class="panel" aria-labelledby="search-title">
-                    <h2 id="search-title"><i class="fas fa-search"></i> 站点搜索</h2>
-                    <input type="text" id="search-input" placeholder="输入站点名称..." aria-label="搜索站点">
-                    <div id="search-results" role="list" aria-label="搜索结果"></div>
-                </section>
-            </div>
-
-            <div class="right-column">
-                <!-- 实时数据统计区域 -->
-                <!-- 这个区域将由JavaScript动态创建 -->
-
+            <!-- 移除原来的侧边栏，主内容区占据全部宽度 -->
+            <div class="main-content full-width">
                 <!-- 线路站点详情 -->
                 <section class="panel" aria-labelledby="station-list-title">
                     <h2 id="station-list-title"><i class="fas fa-map-marked-alt"></i> 线路站点详情</h2>
@@ -51,7 +71,6 @@
 
         <!-- 客流热力图 -->
         <section class="full-width-panel" aria-labelledby="heatmap-title">
-            <h2 id="heatmap-title"><i class="fas fa-chart-line"></i> 客流热力图</h2>
             <div class="heatmap-container">
                 <div class="heatmap-header">
                     <h3><i class="fas fa-fire"></i> 实时客流热力图</h3>
@@ -78,6 +97,16 @@
     <footer>
         <p>© 2025 深圳地铁模拟项目 | 数据仅供参考 | 更新于 <span id="current-date">2025</span></p>
     </footer>
+
+    <!-- 固定定位的工具按钮 -->
+    <div class="floating-tools">
+        <button class="tool-button theme-slide-toggle" id="theme-slide-toggle" aria-label="切换主题">
+            <i class="fas fa-adjust"></i>
+        </button>
+        <button class="tool-button back-to-top" id="back-to-top" aria-label="回到顶部">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
 </div>
 
 <script type="module" src="main.js"></script>
