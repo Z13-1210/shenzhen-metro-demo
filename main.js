@@ -8,6 +8,7 @@ import {loadLinesData} from './modules/dataLoader.js'
 import {renderLineList} from './modules/lineList.js'
 import {renderStationList} from './modules/stationList.js'
 import {realtimeDataService} from './modules/realtimeData.js'
+import Heatmap from './modules/heatmap.js'
 
 // 应用状态
 let currentLines = [];
@@ -15,15 +16,12 @@ let currentSelectedLine = null;
 let realtimeData = {};
 let updateInterval = null;
 let isAppInitialized = false;
-let currentView = 'line'; // 新增：跟踪当前视图是线路('line')还是站点('station')
-let currentDisplayedStation = null; // 新增：跟踪当前显示的站点信息
-let currentTooltip = null;
-let hoveredStation = null;
-let tooltipTimeout = null;
+let currentView = 'line'; // 跟踪当前视图是线路('line')还是站点('station')
+let currentDisplayedStation = null; // 跟踪当前显示的站点信息
 
-// 热力图相关缓存变量
-let stationsDataCache = null;
-let stationPositionsCache = []; // 缓存站点位置用于鼠标交互
+let stationsDataCache = null;// 热力图相关缓存变量
+
+let heatmap = null;// 新增：热力图实例
 
 // 检查DOM是否已加载完成
 function checkDOMReady() {
@@ -157,37 +155,18 @@ function updateTime() {
     setTimeout(updateTime, 1000);
 }
 
-// 计算总站点数
-function calculateTotalStations() {
-    if (!currentLines || currentLines.length === 0) return 0;
-
-    const uniqueStations = new Set();
-    currentLines.forEach(line => {
-        if (line.stations) {
-            line.stations.forEach(station => uniqueStations.add(station));
-        }
-    });
-
-    return uniqueStations.size;
-}
-
-// 更新指定线路的实时数据
 // 更新指定线路的实时数据
 function updateRealtimeDataForLine(line) {
     if (!line || !line.stations) return;
 
     // 计算每个站点的实时数据
     const stationsData = line.stations.map((station, index) => {
-        // 获取站点名称 - 根据您的 lines.json 结构进行调整
         let stationName;
         if (typeof station === 'string') {
-            // 如果是字符串，直接使用
             stationName = station;
         } else if (station && typeof station === 'object') {
-            // 如果是对象，提取 name 属性
             stationName = station.name || station.Name || String(station);
         } else {
-            // 其他情况转换为字符串
             stationName = String(station);
         }
 
@@ -205,11 +184,57 @@ function updateRealtimeDataForLine(line) {
     // 更新站点列表显示
     renderStationList(line.stations, 'station-list', stationsData);
 
-    // 更新热力图
-    updateHeatmapWithRealtimeData(stationsData, line);
+    // 更新热力图（使用新的Heatmap类）
+    if (heatmap) {
+        const stats = heatmap.draw(stationsData, line);
 
-    // 缓存站点数据用于鼠标交互
-    stationsDataCache = stationsData;  // 这行很重要
+        // 【修改点】使用新增的 updateHeatmapStatsUI 函数
+        updateHeatmapStatsUI(stats || calculateHeatmapStats(stationsData));
+    } else {
+        // 如果热力图未初始化，手动计算并显示统计数据
+        updateHeatmapStatsUI(calculateHeatmapStats(stationsData));
+    }
+}
+
+// 【新增】计算热力图统计数据
+function calculateHeatmapStats(stationsData) {
+    if (!stationsData || stationsData.length === 0) {
+        return { total: 0, avg: 0, peak: 0 };
+    }
+
+    const passengers = stationsData.map(data => data.passengers || 0);
+    const total = passengers.reduce((sum, p) => sum + p, 0);
+    const avg = Math.round(total / passengers.length);
+    const peak = Math.max(...passengers);
+
+    return { total, avg, peak };
+}
+
+// 【新增】更新热力图统计数据的UI显示
+function updateHeatmapStatsUI(stats) {
+    console.log('更新统计数据:', stats);
+
+    const totalEl = document.getElementById('total-passengers');
+    const avgEl = document.getElementById('avg-passengers');
+    const peakEl = document.getElementById('peak-passengers');
+
+    if (totalEl) {
+        totalEl.textContent = stats.total ? stats.total.toLocaleString() : '0';
+    } else {
+        console.warn('未找到总客流元素 #total-passengers');
+    }
+
+    if (avgEl) {
+        avgEl.textContent = stats.avg ? stats.avg.toLocaleString() : '0';
+    } else {
+        console.warn('未找到平均客流元素 #avg-passengers');
+    }
+
+    if (peakEl) {
+        peakEl.textContent = stats.peak ? stats.peak.toLocaleString() : '0';
+    } else {
+        console.warn('未找到峰值客流元素 #peak-passengers');
+    }
 }
 
 // 开始实时更新
@@ -222,416 +247,13 @@ function startRealtimeUpdates() {
         if (currentSelectedLine && currentView === 'line') {
             updateRealtimeDataForLine(currentSelectedLine);
         }
-    }, 1000);
+    }, 10000);
 
     // 立即更新一次
     if (currentSelectedLine && currentView === 'line') {
         updateRealtimeDataForLine(currentSelectedLine);
     }
 }
-
-// ==================== 热力图模块 ====================
-
-// 更新热力图（基于实时数据）
-function updateHeatmapWithRealtimeData(stationsData, selectedLine) {
-    const canvas = document.getElementById('heatmap-canvas');
-    if (!canvas) {
-        console.warn('热力图canvas元素不存在');
-        return;
-    }
-
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 如果没有选中的线路或没有站点数据
-    if (!selectedLine || !stationsData || stationsData.length === 0) {
-        drawEmptyState(ctx, canvas);
-        return;
-    }
-
-    // 计算统计数据
-    const stats = calculateHeatmapStats(stationsData);
-    updateHeatmapStatsUI(stats);
-
-    // 设置画布参数
-    const padding = { top: 80, right: 60, bottom: 80, left: 60 };
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-    const plotWidth = canvasWidth - padding.left - padding.right;
-    const plotHeight = canvasHeight - padding.top - padding.bottom;
-
-    // 计算每个站点的位置
-    const stationPositions = calculateOptimizedStationPositions(
-        stationsData,
-        padding,
-        plotWidth,
-        plotHeight
-    );
-
-    // 绘制背景
-    drawSimplifiedBackground(ctx, canvasWidth, canvasHeight);
-
-    // 绘制线路
-    drawSimplifiedLine(ctx, stationPositions, selectedLine.color);
-
-    // 绘制站点
-    drawSimplifiedStations(ctx, stationPositions, stationsData);
-
-    // 绘制站点标签
-    drawOptimizedLabels(ctx, stationPositions, stationsData);
-
-    // 绘制图例
-    drawSimplifiedLegend(ctx, canvasWidth, canvasHeight);
-
-    // 缓存站点位置用于鼠标交互
-    cacheStationPositions(stationPositions, stationsData);
-}
-
-// 计算优化后的站点位置
-function calculateOptimizedStationPositions(stationsData, padding, plotWidth, plotHeight) {
-    const numStations = stationsData.length;
-    const positions = [];
-
-    if (numStations === 0) return positions;
-
-    // 中心线Y位置
-    const centerY = padding.top + plotHeight / 2;
-
-    // 站点间距
-    const spacing = plotWidth / Math.max(1, numStations - 1);
-
-    for (let i = 0; i < numStations; i++) {
-        const x = padding.left + i * spacing;
-
-        // 轻微的自然弯曲
-        const waveAmplitude = plotHeight * 0.2;
-        const t = i / Math.max(1, numStations - 1);
-        const y = centerY + waveAmplitude * Math.sin(t * Math.PI * 1.5);
-
-        positions.push({
-            x,
-            y,
-            stationIndex: i
-        });
-    }
-
-    return positions;
-}
-
-// 绘制简化背景
-function drawSimplifiedBackground(ctx, width, height) {
-    // 绘制白色背景
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-
-    // 绘制网格线
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
-    ctx.lineWidth = 1;
-
-    // 水平网格线
-    for (let y = 20; y < height; y += 20) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-    }
-
-    // 垂直网格线
-    for (let x = 20; x < width; x += 20) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-    }
-}
-
-// 绘制简化线路
-function drawSimplifiedLine(ctx, positions, lineColor) {
-    if (positions.length < 2) return;
-
-    ctx.beginPath();
-
-    // 使用贝塞尔曲线连接站点
-    for (let i = 0; i < positions.length - 1; i++) {
-        const current = positions[i];
-        const next = positions[i + 1];
-
-        if (i === 0) {
-            ctx.moveTo(current.x, current.y);
-        }
-
-        const cpDist = (next.x - current.x) * 0.3;
-        const cp1x = current.x + cpDist;
-        const cp1y = current.y;
-        const cp2x = next.x - cpDist;
-        const cp2y = next.y;
-
-        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, next.x, next.y);
-    }
-
-    // 线路样式
-    ctx.strokeStyle = lineColor;
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-}
-
-// 绘制简化站点
-function drawSimplifiedStations(ctx, positions, stationsData) {
-    positions.forEach((pos, index) => {
-        const stationData = stationsData[index];
-        if (!stationData) return;
-
-        const { x, y } = pos;
-        const congestionColor = stationData.congestion.color;
-
-        // 绘制简单的圆点
-        ctx.beginPath();
-        ctx.arc(x, y, 8, 0, Math.PI * 2);
-        ctx.fillStyle = congestionColor;
-        ctx.fill();
-
-        // 细白色边框
-        ctx.beginPath();
-        ctx.arc(x, y, 8, 0, Math.PI * 2);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-    });
-}
-
-// 绘制优化标签
-function drawOptimizedLabels(ctx, positions, stationsData) {
-    const numStations = positions.length;
-
-    positions.forEach((pos, index) => {
-        const stationData = stationsData[index];
-        if (!stationData) return;
-
-        const { x, y } = pos;
-
-        // 根据站点索引决定标签位置
-        // 交替显示在上方和下方，避免拥挤
-        const labelPosition = index % 4; // 0,1,2,3
-        let labelY, textBaseline;
-
-        switch (labelPosition) {
-            case 0: // 上方
-                labelY = y - 15;
-                textBaseline = 'bottom';
-                break;
-            case 1: // 下方
-                labelY = y + 15;
-                textBaseline = 'top';
-                break;
-            case 2: // 更上方
-                labelY = y - 25;
-                textBaseline = 'bottom';
-                break;
-            case 3: // 更下方
-                labelY = y + 25;
-                textBaseline = 'top';
-                break;
-        }
-
-        // 绘制站点名称
-        ctx.fillStyle = '#333333';
-        ctx.font = '12px Arial, "Microsoft YaHei", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = textBaseline;
-        ctx.fillText(stationData.stationName, x, labelY);
-    });
-}
-
-// 绘制简化图例
-function drawSimplifiedLegend(ctx, width, height) {
-    const legendX = 100;
-    const legendY = height - 40;
-
-    const congestionLevels = [
-        { level: '畅通', color: '#10b981' },
-        { level: '舒适', color: '#3b82f6' },
-        { level: '繁忙', color: '#f59e0b' },
-        { level: '拥挤', color: '#ef4444' },
-        { level: '拥堵', color: '#dc2626' }
-    ];
-
-    // 绘制图例标题
-    ctx.fillStyle = '#333333';
-    ctx.font = 'bold 12px Arial, "Microsoft YaHei", sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('客流等级:', 20, legendY);
-
-    // 绘制图例项
-    const itemSpacing = 60;
-
-    congestionLevels.forEach((level, index) => {
-        const x = legendX + index * itemSpacing;
-
-        // 绘制简单颜色方块
-        ctx.fillStyle = level.color;
-        ctx.fillRect(x, legendY - 6, 10, 10);
-
-        // 绘制标签
-        ctx.fillStyle = '#666666';
-        ctx.font = '12px Arial, "Microsoft YaHei", sans-serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(level.level, x + 15, legendY);
-    });
-}
-
-// 缓存站点位置用于鼠标交互
-function cacheStationPositions(positions, stationsData) {
-    stationPositionsCache = positions.map((pos, index) => {
-        const stationData = stationsData[index];
-        if (!stationData) return null;
-
-        return {
-            stationData: stationData,
-            x: pos.x,
-            y: pos.y,
-            stationIndex: pos.stationIndex
-        };
-    }).filter(item => item !== null);
-}
-
-// 其他辅助函数保持不变
-function calculateHeatmapStats(stationsData) {
-    if (!stationsData || stationsData.length === 0) {
-        return { total: 0, avg: 0, peak: 0 };
-    }
-
-    const passengers = stationsData.map(data => data.passengers);
-    const total = passengers.reduce((sum, p) => sum + p, 0);
-    const avg = Math.round(total / passengers.length);
-    const peak = Math.max(...passengers);
-
-    return { total, avg, peak };
-}
-
-function updateHeatmapStatsUI(stats) {
-    const totalEl = document.getElementById('total-passengers');
-    const avgEl = document.getElementById('avg-passengers');
-    const peakEl = document.getElementById('peak-passengers');
-
-    if (totalEl) totalEl.textContent = stats.total.toLocaleString();
-    if (avgEl) avgEl.textContent = stats.avg.toLocaleString();
-    if (peakEl) peakEl.textContent = stats.peak.toLocaleString();
-}
-
-function drawEmptyState(ctx, canvas) {
-    ctx.fillStyle = '#f8f9fa';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = '#6c757d';
-    ctx.font = 'bold 20px Arial, "Microsoft YaHei", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('请选择一条线路查看热力图', canvas.width / 2, canvas.height / 2);
-}
-
-// 热力图鼠标事件
-// 热力图鼠标事件
-function initHeatmapMouseEvents() {
-    const heatmapCanvas = document.getElementById('heatmap-canvas');
-    if (!heatmapCanvas) {
-        console.warn('热力图canvas元素未找到');
-        return;
-    }
-
-    // 鼠标移动事件
-    heatmapCanvas.addEventListener('mousemove', (e) => {
-        if (!stationPositionsCache || stationPositionsCache.length === 0) {
-            return;
-        }
-
-        const rect = heatmapCanvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // 检查鼠标是否在站点圆点上
-        let hoveredStation = null;
-
-        stationPositionsCache.forEach((pos) => {
-            if (!pos) return;
-
-            const distance = Math.sqrt(
-                Math.pow(mouseX - pos.x, 2) +
-                Math.pow(mouseY - pos.y, 2)
-            );
-
-            if (distance <= 10) { // 10px半径内
-                hoveredStation = pos;
-            }
-        });
-
-        // 显示tooltip
-        if (hoveredStation && hoveredStation.stationData) {
-            const stationData = hoveredStation.stationData;
-            showSimplifiedTooltip(e.clientX, e.clientY, stationData);
-        } else {
-            hideStationTooltip();
-        }
-    });
-
-    // 鼠标离开画布时隐藏tooltip
-    heatmapCanvas.addEventListener('mouseleave', hideStationTooltip);
-}
-
-// 隐藏站点提示框
-function hideStationTooltip() {
-    if (currentTooltip) {
-        if (currentTooltip.parentNode) {
-            currentTooltip.parentNode.removeChild(currentTooltip);
-        }
-        currentTooltip = null;
-    }
-    hoveredStation = null;
-}
-
-// 显示简化tooltip
-function showSimplifiedTooltip(x, y, stationData) {
-    hideStationTooltip();
-
-    const tooltip = document.createElement('div');
-    tooltip.className = 'station-tooltip';
-    tooltip.innerHTML = `
-        <div class="tooltip-header">${stationData.stationName}</div>
-        <div class="tooltip-content">客流量: ${stationData.passengers.toLocaleString()}人</div>
-    `;
-
-    document.body.appendChild(tooltip);
-    currentTooltip = tooltip;
-
-    // 计算位置
-    const tooltipRect = tooltip.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let left = x + 15;
-    let top = y - 50;
-
-    if (left + tooltipRect.width > viewportWidth) {
-        left = x - tooltipRect.width - 15;
-    }
-    if (top < 0) {
-        top = y + 15;
-    }
-    if (top + tooltipRect.height > viewportHeight) {
-        top = y - tooltipRect.height - 15;
-    }
-
-    tooltip.style.left = left + 'px';
-    tooltip.style.top = top + 'px';
-
-    // 5秒后自动隐藏
-    tooltipTimeout = setTimeout(hideStationTooltip, 5000);
-}
-
-
 // 更新页面标题
 function updatePageTitle(lineName, lineColor) {
     const titleElement = document.querySelector('header h1');
@@ -903,6 +525,7 @@ function initSearch() {
         searchResults.style.display = 'block';
     }
 }
+
 // 添加动态样式
 function addDynamicStyles() {
     if (document.getElementById('dynamic-styles')) return;
@@ -952,6 +575,12 @@ function addDynamicStyles() {
             gap: 5px;
         }
         
+        /* 新增：热力图工具提示样式 */
+        #heatmap-tooltip {
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        
         /* 移动端触摸反馈 */
         @media (hover: none) and (pointer: coarse) {
             .line-item:hover {
@@ -961,21 +590,16 @@ function addDynamicStyles() {
             
             .line-item:active {
                 opacity: 0.9;
-                transform: scale(1); /* 修改这里，从1.05改为1，避免按钮放大 */
+                transform: scale(1);
             }
-            
-            .station-item:hover {
-                background: #f1f5f9;
-                transform: translateX(0);
-            }
-            
-            .station-item:active {
-                background: #e2e8f0;
-                transform: translateX(5px);
-            }
-            
+
             .panel:hover {
                 transform: translateY(0);
+            }
+            
+            /* 移动端不显示tooltip */
+            #heatmap-tooltip {
+                display: none !important;
             }
         }
     `;
@@ -992,28 +616,150 @@ function addMobileSupport() {
 // 主题切换功能
 function initThemeToggle() {
     const themeToggle = document.getElementById('theme-toggle');
-    if (!themeToggle) return;
+    const themeSlideToggle = document.getElementById('theme-slide-toggle');
+
+    if (!themeToggle && !themeSlideToggle) return;
 
     // 检查本地存储的主题偏好
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
-        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        if (themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        if (themeSlideToggle) themeSlideToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    } else {
+        if (themeSlideToggle) themeSlideToggle.innerHTML = '<i class="fas fa-moon"></i>';
     }
 
-    themeToggle.addEventListener('click', () => {
-        const isDarkMode = document.body.classList.contains('dark-mode');
+    // 顶部导航栏主题切换
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            toggleTheme(!isDarkMode);
+        });
+    }
 
-        if (isDarkMode) {
-            // 切换到浅色模式
-            document.body.classList.remove('dark-mode');
-            themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
-            localStorage.setItem('theme', 'light');
+    // 右下角滑动主题切换
+    if (themeSlideToggle) {
+        themeSlideToggle.addEventListener('click', () => {
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            toggleTheme(!isDarkMode);
+        });
+    }
+}
+
+// 切换主题的统一函数
+function toggleTheme(isDarkMode) {
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeSlideToggle = document.getElementById('theme-slide-toggle');
+
+    if (isDarkMode) {
+        // 切换到深色模式
+        document.body.classList.add('dark-mode');
+        if (themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        if (themeSlideToggle) themeSlideToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        localStorage.setItem('theme', 'dark');
+    } else {
+        // 切换到浅色模式
+        document.body.classList.remove('dark-mode');
+        if (themeToggle) themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        if (themeSlideToggle) themeSlideToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        localStorage.setItem('theme', 'light');
+    }
+}
+
+// 初始化回到顶部功能
+function initBackToTop() {
+    const backToTopButton = document.getElementById('back-to-top');
+
+    if (!backToTopButton) return;
+
+    // 监听滚动事件
+    window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 300) {
+            backToTopButton.classList.add('visible');
         } else {
-            // 切换到深色模式
-            document.body.classList.add('dark-mode');
-            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-            localStorage.setItem('theme', 'dark');
+            backToTopButton.classList.remove('visible');
+        }
+    });
+
+    // 回到顶部按钮点击事件
+    backToTopButton.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+}
+
+// 初始化热力图模块
+function initHeatmap() {
+    try {
+        // 创建热力图实例
+        heatmap = new Heatmap('heatmap-canvas');
+        console.log('热力图模块初始化成功');
+    } catch (error) {
+        console.error('热力图模块初始化失败:', error);
+        // 如果热力图初始化失败，可以显示错误信息或使用备用方案
+        const heatmapCanvas = document.getElementById('heatmap-canvas');
+        if (heatmapCanvas) {
+            const ctx = heatmapCanvas.getContext('2d');
+            ctx.fillStyle = '#f8f9fa';
+            ctx.fillRect(0, 0, heatmapCanvas.width, heatmapCanvas.height);
+
+            ctx.fillStyle = '#6c757d';
+            ctx.font = 'bold 20px Arial, "Microsoft YaHei", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('热力图加载失败', heatmapCanvas.width / 2, heatmapCanvas.height / 2);
+        }
+    }
+}
+
+// 初始化侧边栏功能
+function initSidebar() {
+    const hamburgerMenu = document.getElementById('hamburger-menu');
+    const closeSidebar = document.getElementById('close-sidebar');
+    const fixedSidebar = document.getElementById('fixed-sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+    if (!hamburgerMenu || !fixedSidebar) return;
+
+    // 打开侧边栏
+    function openSidebar() {
+        fixedSidebar.classList.add('active');
+        sidebarOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden'; // 防止背景滚动
+    }
+
+    // 关闭侧边栏
+    function closeSidebarFunc() {
+        fixedSidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+        document.body.style.overflow = ''; // 恢复滚动
+    }
+
+    // 汉堡菜单点击事件
+    hamburgerMenu.addEventListener('click', openSidebar);
+
+    // 关闭按钮点击事件
+    if (closeSidebar) {
+        closeSidebar.addEventListener('click', closeSidebarFunc);
+    }
+
+    // 遮罩层点击事件
+    sidebarOverlay.addEventListener('click', closeSidebarFunc);
+
+    // ESC键关闭侧边栏
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && fixedSidebar.classList.contains('active')) {
+            closeSidebarFunc();
+        }
+    });
+
+    // 点击线路项时自动关闭侧边栏（移动端）
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('.line-item') && window.innerWidth <= 768) {
+            setTimeout(closeSidebarFunc, 300);
         }
     });
 }
@@ -1026,6 +772,10 @@ async function initApp() {
     showLoadingScreen();
 
     try {
+
+        // 初始化侧边栏功能
+        initSidebar();
+
         // 2. 实时更新的当前时间
         updateTime();
 
@@ -1041,11 +791,14 @@ async function initApp() {
 
         console.log(`成功加载 ${currentLines.length} 条线路数据`);
 
-        // 4. 渲染线路列表
+        // 4. 初始化热力图模块（新增）
+        initHeatmap();
+
+        // 5. 渲染线路列表
         renderLineList(currentLines, 'line-list', (selectedLine) => {
             currentSelectedLine = selectedLine;
-            // 设置视图为线路视图
             currentView = 'line';
+
             // 立即更新实时数据并渲染站点列表
             updateRealtimeDataForLine(selectedLine);
 
@@ -1066,11 +819,8 @@ async function initApp() {
             }
         });
 
-        // 5. 初始化搜索功能
+        // 6. 初始化搜索功能
         initSearch();
-
-        // 6. 初始化热力图鼠标事件
-        initHeatmapMouseEvents();
 
         // 7. 开始实时更新
         startRealtimeUpdates();
@@ -1104,6 +854,9 @@ async function startApp() {
         // 初始化主题切换
         initThemeToggle();
 
+        // 初始化回到顶部功能
+        initBackToTop();
+
         // 添加动态样式
         addDynamicStyles();
 
@@ -1125,9 +878,11 @@ window.debugApp = {
     getCurrentLines: () => currentLines,
     getSelectedLine: () => currentSelectedLine,
     getRealtimeData: () => realtimeData,
+    getHeatmap: () => heatmap,
     getAppStatus: () => ({
         initialized: isAppInitialized,
         linesCount: currentLines.length,
-        selectedLine: currentSelectedLine?.name
+        selectedLine: currentSelectedLine?.name,
+        heatmapInitialized: !!heatmap
     })
 };
