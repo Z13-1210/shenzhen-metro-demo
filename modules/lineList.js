@@ -9,6 +9,11 @@ export function renderLineList(lines, containerId, onLineClick) {
         return;
     }
 
+    if (!lines || lines.length === 0) {
+        container.innerHTML = '<p class="no-data">暂无线路数据</p>';
+        return;
+    }
+
     // 清空容器
     container.innerHTML = '';
 
@@ -23,7 +28,7 @@ export function renderLineList(lines, containerId, onLineClick) {
 
         // 添加键盘支持，使元素可通过Tab键访问
         lineButton.tabIndex = 0;
-        
+
         // 添加点击事件监听器
         lineButton.addEventListener('click', () => {
             // 移除之前活跃的线路
@@ -37,8 +42,9 @@ export function renderLineList(lines, containerId, onLineClick) {
             if (typeof onLineClick === 'function') {
                 onLineClick(line);
             }
+
         });
-        
+
         // 添加键盘事件监听器，支持Enter键和空格键操作
         lineButton.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
