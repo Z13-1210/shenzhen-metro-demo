@@ -154,8 +154,7 @@ export class RealtimeDataService {
      * 计算站点实时客流
      */
     calculateStationPassengers(stationName, lineName, stationIndex, totalStations) {
-        // 基础客流
-        let base = 10000;
+        let base = 2000;    //2000人基础客流，更符合实际
 
         // 时间系数
         const timeFactor = this.getTimeFactor();
@@ -199,13 +198,13 @@ export class RealtimeDataService {
     determineStationType(stationName, lineName) {
         // 确保 stationName 是字符串
         if (typeof stationName !== 'string') {
-            console.warn('stationName 不是字符串:', stationName, '类型:', typeof stationName);
-            // 如果是对象，尝试获取 name 属性
-            if (stationName && typeof stationName === 'object' && stationName.name) {
+            console.warn('stationName 不是字符串，尝试获取 name 属性:', stationName);
+            if (stationName && stationName.name) {
                 stationName = stationName.name;
             } else {
-                // 否则转换为字符串
-                stationName = String(stationName);
+                // 明确记录错误
+                console.error('无法获取站点名称，对象结构不符合预期:', stationName);
+                stationName = '未知站点';
             }
         }
 
