@@ -266,11 +266,23 @@ function updatePageTitle(lineName, lineColor) {
 }
 
 /**
- * 只显示单个站点信息（搜索功能专用）
- * 与 showSingleStation 不同，这个函数不切换线路视图
+ * 只显示单个站点信息（搜索功能专用），支持多线路整合显示
  */
 function showSingleStationOnly(stationInfo) {
     console.log('显示单个站点信息（搜索功能）:', stationInfo);
+
+    // 清空搜索框内容
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    // 隐藏搜索结果
+    const searchResults = document.getElementById('search-results');
+    if (searchResults) {
+        searchResults.innerHTML = '';
+        searchResults.style.display = 'none';
+    }
 
     const stationContainer = document.getElementById('station-list');
     if (!stationContainer) return;
@@ -279,87 +291,134 @@ function showSingleStationOnly(stationInfo) {
     currentView = 'station';
     currentDisplayedStation = stationInfo;
 
-    // 找到该站点在线路中的索引
-    const line = stationInfo.line;
-    let stationIndex = -1;
-    let stationObj = null;
-
-    // 搜索站点在线路中的位置
-    for (let i = 0; i < line.stations.length; i++) {
-        const station = line.stations[i];
-        let stationName = '';
-
-        if (typeof station === 'string') {
-            stationName = station;
-        } else if (station && typeof station === 'object') {
-            stationName = station.name || station.Name || station.stationName || '';
-        } else {
-            stationName = String(station);
-        }
-
-        if (stationName === stationInfo.name) {
-            stationIndex = i;
-            stationObj = station;
-            break;
-        }
-    }
-
-    if (stationIndex === -1) {
-        console.warn(`未在线路 ${line.name} 中找到站点 ${stationInfo.name}`);
-        return;
-    }
-
-    // 生成该站点的实时数据
-    const stationData = realtimeDataService.calculateStationPassengers(
-        stationInfo.name,
-        line.name,
-        stationIndex,
-        line.stations.length
-    );
-
     // 清空容器
     stationContainer.innerHTML = '';
 
-    // 创建站点元素
+    // 创建一个统一的站点元素
     const stationElement = document.createElement('div');
-    stationElement.className = 'station-item';
+    stationElement.className = 'station-item featured';
     stationElement.tabIndex = 0;
 
+    // 计算所有线路的客流总和
+    let totalPassengers = 0;
+    let maxPassengers = 0;
+    let maxPassengersLine = null;
+
+    // 收集每条线路的客流数据
+    const linesData = [];
+
+    stationInfo.lines.forEach((line, lineIndex) => {
+        // 搜索站点在线路中的位置
+        let stationIndex = -1;
+
+        for (let i = 0; i < line.stations.length; i++) {
+            const station = line.stations[i];
+            let stationName = '';
+
+            if (typeof station === 'string') {
+                stationName = station;
+            } else if (station && typeof station === 'object') {
+                stationName = station.name || station.Name || station.stationName || '';
+            } else {
+                stationName = String(station);
+            }
+
+            if (stationName === stationInfo.name) {
+                stationIndex = i;
+                break;
+            }
+        }
+
+        if (stationIndex === -1) {
+            console.warn(`未在线路 ${line.name} 中找到站点 ${stationInfo.name}`);
+            return; // 跳过该线路
+        }
+
+        // 生成该站点的实时数据
+        const stationData = realtimeDataService.calculateStationPassengers(
+            stationInfo.name,
+            line.name,
+            stationIndex,
+            line.stations.length
+        );
+
+        totalPassengers += stationData.passengers;
+        linesData.push({
+            line: line,
+            stationData: stationData,
+            stationIndex: stationIndex
+        });
+
+        // 记录最大客流
+        if (stationData.passengers > maxPassengers) {
+            maxPassengers = stationData.passengers;
+            maxPassengersLine = line;
+        }
+    });
+
+    if (linesData.length === 0) return;
+
+    // 计算平均客流
+    const avgPassengers = Math.round(totalPassengers / linesData.length);
+
+    // 使用最大客流的拥堵等级作为显示
+    const maxCongestion = linesData.find(d => d.stationData.passengers === maxPassengers)?.stationData.congestion ||
+        linesData[0].stationData.congestion;
+
     // 计算客流百分比用于进度条
-    const passengerPercentage = Math.min(100, Math.floor((stationData.passengers / 2000) * 100));
+    const passengerPercentage = Math.min(100, Math.floor((avgPassengers / 2000) * 100));
+
+    // 生成所有线路的标签
+    const lineBadges = linesData.map((lineData, index) =>
+        `<span class="line-badge" style="background: ${lineData.line.color}">${lineData.line.name}</span>`
+    ).join(' ');
 
     stationElement.innerHTML = `
         <div class="station-header">
-            <div class="station-number">${stationIndex + 1}</div>
+            <div class="station-number featured">${linesData[0].stationIndex + 1}</div>
             <div class="station-name">${stationInfo.name}</div>
-            <div class="congestion-badge" style="background: ${stationData.congestion.color}">
-                ${stationData.congestion.emoji || '🚇'} ${stationData.congestion.level}
+            <div class="congestion-badge" style="background: ${maxCongestion.color}">
+                ${maxCongestion.emoji || '🚇'} ${maxCongestion.level}
             </div>
         </div>
         <div class="station-details">
             <div class="passenger-count">
                 <i class="fas fa-users"></i> 
-                <span class="passenger-number">${stationData.passengers.toLocaleString()}</span> 人
+                <div class="passenger-stats">
+                    <div class="passenger-total">
+                        <span class="passenger-number">${totalPassengers.toLocaleString()} </span> 人（总客流）
+                    </div>
+                    ${linesData.length > 1 ?
+        `<div class="passenger-summary">
+                           
+                        </div>` : ''}
+                </div>
             </div>
             <div class="passenger-indicator">
-                <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${stationData.congestion.color}"></div>
+                <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${maxCongestion.color}"></div>
             </div>
         </div>
-        <div class="station-meta">
+        <div class="station-meta" style="margin: 10px 0">
             <div class="station-line">
-                <span class="line-badge" style="background: ${line.color}">${line.name}</span>
+                ${lineBadges}
             </div>
         </div>
+         <small>途径线路：${linesData.length}条</small>
     `;
 
     stationContainer.appendChild(stationElement);
 
-    // 【新增】更新页面标题，显示当前查看的站点
+    // 更新页面标题，站点名称使用主题色，线路名称使用各自颜色
     const titleElement = document.querySelector('header h1');
     if (titleElement) {
+        // 生成所有线路名称，每个线路使用自己的颜色
+        const lineTitles = linesData.map(lineData =>
+            `<span style="color: ${lineData.line.color}">${lineData.line.name}</span>`
+        ).join('、');
+
         titleElement.innerHTML = `
             <i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统 
-            <span class="current-station" style="color: ${line.color}">| ${stationInfo.name} (${line.name})</span>
+            <span class="current-station">|<span class="station-title-name" style="padding-left: 5px">${stationInfo.name}</span>（${lineTitles}）</span>
         `;
     }
 }
@@ -411,13 +470,14 @@ function initSearch() {
         }
     });
 
+// 修改 performSearch 函数中的站点分组逻辑
     function performSearch(query) {
         if (!currentLines || currentLines.length === 0) {
             console.warn('线路数据未加载，无法搜索');
             return;
         }
 
-        const allStations = [];
+        const stationMap = new Map(); // 使用Map来按站点名称分组
 
         // 遍历所有线路的站点
         currentLines.forEach(line => {
@@ -433,15 +493,12 @@ function initSearch() {
                 if (typeof station === 'string') {
                     stationName = station;
                 } else if (station && typeof station === 'object') {
-                    // 尝试从不同可能的属性中获取站点名称
                     stationName = station.name || station.Name || station.stationName || '';
 
-                    // 如果是坐标对象但没有名称，跳过
                     if (!stationName && station.coordinates) {
                         return; // 跳过只有坐标没有名称的站点
                     }
 
-                    // 如果还是没有名称，尝试转换为字符串
                     if (!stationName) {
                         stationName = String(station);
                     }
@@ -451,68 +508,87 @@ function initSearch() {
 
                 // 检查是否匹配搜索词
                 if (stationName && stationName.toLowerCase().includes(query.toLowerCase())) {
-                    allStations.push({
-                        name: stationName,
-                        line: line,
-                        color: line.color,
-                        stationObj: station
-                    });
+                    // 如果站点已经在map中，添加线路信息
+                    if (stationMap.has(stationName)) {
+                        const existingStation = stationMap.get(stationName);
+                        // 检查是否已包含该线路，避免重复
+                        if (!existingStation.lines.some(l => l.id === line.id)) {
+                            existingStation.lines.push(line);
+                        }
+                    } else {
+                        // 创建新的站点条目
+                        stationMap.set(stationName, {
+                            name: stationName,
+                            lines: [line],
+                            stationObj: station
+                        });
+                    }
                 }
             });
         });
 
+        // 将Map转换为数组
+        const groupedStations = Array.from(stationMap.values());
+
         // 更新搜索结果
-        if (allStations.length === 0) {
+        if (groupedStations.length === 0) {
             searchResults.innerHTML = `
-                <div class="search-result-item no-results">
-                    未找到包含 "${query}" 的站点
-                </div>
-            `;
+            <div class="search-result-item no-results">
+                未找到包含 "${query}" 的站点
+            </div>
+        `;
         } else {
             // 限制显示数量，避免过多结果
-            const displayStations = allStations.slice(0, 20);
+            const displayStations = groupedStations.slice(0, 20);
 
             let html = `
-                <div class="search-result-item results-count">
-                    找到 ${allStations.length} 个匹配站点
+            <div class="search-result-item results-count">
+                找到 ${groupedStations.length} 个匹配站点
+            </div>
+        `;
+
+            displayStations.forEach((item, index) => {
+                // 生成所有线路的标签
+                const lineBadges = item.lines.map(line =>
+                    `<span class="line-badge" style="background:${line.color}">${line.name}</span>`
+                ).join(' ');
+
+                // 存储所有线路ID，用逗号分隔
+                const lineIds = item.lines.map(line => line.id).join(',');
+
+                html += `    
+                <div class="search-result-item" data-lines="${lineIds}" data-station="${item.name}">
+                    <span class="station-name" style="text-align: left">${item.name}</span>
+                    <div class="line-badges-container">
+                        ${lineBadges}
+                    </div>
                 </div>
             `;
 
-            displayStations.forEach((item, index) => {
-                html += `    
-                    <div class="search-result-item" data-line="${item.line.id}" data-station="${item.name}">
-                        <span class="station-name">${item.name}</span>
-                        <span class="line-badge" style="background:${item.color}">${item.line.name}</span>
-                    </div>
-                `;
-
                 // 如果结果太多，添加提示
-                if (index === 19 && allStations.length > 20) {
-                    html += `<div class="search-result-item more-results">... 还有 ${allStations.length - 20} 个结果</div>`;
+                if (index === 19 && groupedStations.length > 20) {
+                    html += `<div class="search-result-item more-results">... 还有 ${groupedStations.length - 20} 个结果</div>`;
                 }
             });
 
             searchResults.innerHTML = html;
 
             // 为搜索结果添加点击事件
-            const searchResultItems = searchResults.querySelectorAll('.search-result-item[data-line]');
+            const searchResultItems = searchResults.querySelectorAll('.search-result-item[data-lines]');
             searchResultItems.forEach(item => {
                 item.addEventListener('click', () => {
-                    const lineId = parseInt(item.getAttribute('data-line'));
+                    const lineIds = item.getAttribute('data-lines').split(',').map(id => parseInt(id));
                     const stationName = item.getAttribute('data-station');
 
-                    // 找到对应的线路
-                    const line = currentLines.find(l => l.id === lineId);
-                    if (line) {
-                        // 【修改点1】显示单个站点信息
+                    // 找到对应的所有线路
+                    const lines = currentLines.filter(l => lineIds.includes(l.id));
+                    if (lines.length > 0) {
+                        // 显示单个站点信息，传入所有线路
                         showSingleStationOnly({
                             name: stationName,
-                            line: line,
-                            color: line.color
+                            lines: lines,
+                            color: lines[0].color // 使用第一条线路的颜色
                         });
-
-                        // 【修改点2】不自动切换线路，保持当前视图
-                        // 不清空搜索框，让用户可以看到搜索的关键词
 
                         // 隐藏搜索结果
                         searchResults.style.display = 'none';
@@ -566,6 +642,14 @@ function addDynamicStyles() {
             color: var(--text-primary);
         }
         
+        .passenger-total{
+            color: var(--text-primary);    
+       }
+       
+       .dark-mode .passenger-total{
+            color: #fff;
+       }
+        
         .passenger-trend {
             font-size: 0.85rem;
             color: var(--text-secondary);
@@ -591,10 +675,6 @@ function addDynamicStyles() {
             .line-item:active {
                 opacity: 0.9;
                 transform: scale(1);
-            }
-
-            .panel:hover {
-                transform: translateY(0);
             }
             
             /* 移动端不显示tooltip */
