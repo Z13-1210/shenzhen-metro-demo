@@ -1,0 +1,154 @@
+/*
+    responsive.css
+    响应式布局样式
+*/
+
+.header-search{
+    text-align: right;
+}
+
+@media (max-width: 1024px) {
+    .top-container {
+        flex-direction: column;
+    }
+
+    .main-content {
+        width: 100%;
+    }
+
+    .header-search {
+        width: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-container {
+        padding: var(--spacing-md);
+    }
+
+    .header-controls {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .header-search {
+        width: 100%;
+        order: 3; /* 在移动端将搜索框放在最后 */
+        margin-top: var(--spacing-sm);
+    }
+
+    header h1 {
+        font-size: var(--text-2xl);
+    }
+
+    .panel, .full-width-panel {
+        padding: var(--spacing-md);
+    }
+
+    #station-list {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: var(--spacing-sm);
+    }
+
+    #heatmap-canvas {
+        height: 300px;
+    }
+
+    .heatmap-stats {
+        gap: 15px;
+        padding: 10px 15px;
+    }
+
+    .fixed-sidebar {
+        width: 280px;
+        left: -280px;
+    }
+
+    .hamburger-menu {
+        top: 15px;
+        left: 15px;
+        width: 45px;
+        height: 45px;
+    }
+
+    .sidebar-content {
+        padding: var(--spacing-md);
+    }
+}
+
+@media (max-width: 480px) {
+    .app-container {
+        padding: var(--spacing-sm);
+        gap: var(--spacing-md);
+    }
+
+    header h1 {
+        font-size: var(--text-xl);
+    }
+
+    .subtitle {
+        font-size: var(--text-xs);
+    }
+
+    .panel, .full-width-panel {
+        padding: var(--spacing-md);
+    }
+
+    .panel h2, .full-width-panel h2 {
+        font-size: var(--text-base);
+    }
+
+    #line-list {
+        gap: var(--spacing-xs);
+    }
+
+    .line-item {
+        padding: 8px 12px;
+        font-size: var(--text-xs);
+    }
+
+    #station-list {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+
+    #heatmap-canvas {
+        height: 250px;
+    }
+
+    .heatmap-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+
+    .heatmap-stats {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    footer {
+        font-size: var(--text-xs);
+    }
+
+    .fixed-sidebar {
+        width: 100%;
+        left: -100%;
+    }
+
+    .hamburger-menu {
+        top: 10px;
+        left: 10px;
+        width: 40px;
+        height: 40px;
+    }
+}
+
+@media (min-width: 1400px) {
+    .app-container {
+        max-width: 1600px;
+    }
+
+    #station-list {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}

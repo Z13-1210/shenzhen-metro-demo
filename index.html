@@ -4,7 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>深圳地铁客流模拟系统</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles/base.css">
+    <link rel="stylesheet" href="styles/layout.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/utilities.css">
+    <link rel="stylesheet" href="styles/responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <meta name="description" content="深圳地铁实时客流模拟系统 - 基于原生JavaScript开发的可视化项目">
 </head>
@@ -32,15 +36,6 @@
                 </h3>
                 <div id="line-list" role="list" aria-label="地铁线路列表"></div>
             </section>
-
-            <!-- 搜索部分 -->
-            <section class="sidebar-section">
-                <h3 class="sidebar-subtitle" style="padding: 10px 0;">
-                    <i class="fas fa-search"></i> 站点搜索
-                </h3>
-                <input type="text" id="search-input" placeholder="输入站点名称..." aria-label="搜索站点">
-                <div id="search-results" role="list" aria-label="搜索结果"></div>
-            </section>
         </div>
     </div>
 
@@ -50,10 +45,15 @@
     <header>
         <h1><i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统</h1>
         <div class="header-controls">
-            <p class="subtitle">基于原生JavaScript开发的可视化项目 | 数据更新时间: <span id="update-time">--:--:--</span></p>
-            <button class="theme-toggle" id="theme-toggle" aria-label="切换主题">
-                <i class="fas fa-moon"></i>
-            </button>
+            <p class="subtitle" >基于原生JavaScript开发的可视化项目 | 数据更新时间: <span id="update-time">--:--:--</span></p>
+<!--            <button class="theme-toggle" id="theme-toggle" aria-label="切换主题">-->
+<!--                <i class="fas fa-moon"></i>-->
+<!--            </button>-->
+            <!-- 搜索模块移到右上角 -->
+            <div class="header-search">
+                <input type="text" id="search-input" placeholder="输入站点名称..." aria-label="搜索站点">
+                <div id="search-results" role="list" aria-label="搜索结果"></div>
+            </div>
         </div>
     </header>
 
@@ -94,7 +94,7 @@
         </section>
     </main>
 
-    <footer>
+    <footer style="text-align: center">
         <p>© 2025 深圳地铁模拟项目 | 数据仅供参考 | 更新于 <span id="current-date">2025</span></p>
     </footer>
 

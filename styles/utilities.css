@@ -1,0 +1,30 @@
+/*
+    utilities.css
+    全局实用工具样式
+*/
+
+/* 动画 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 打印样式 */
+@media print {
+    .theme-toggle,
+    #search-input,
+    #heatmap-canvas {
+        display: none;
+    }
+
+    .panel, .full-width-panel {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
