@@ -218,38 +218,76 @@ export class Heatmap {
     /**
      * 显示工具提示
      */
+    // 在 heatmap.js 中找到 showTooltip 函数并替换为以下代码
     showTooltip(x, y, stationInfo) {
         if (!this.tooltipElement || !stationInfo) return;
 
         const stationData = stationInfo.stationData;
         if (!stationData || !stationData.stationName) return;
 
-        // 获取客流数据
-        const passengers = stationData.passengers !== undefined ?
-            stationData.passengers : 0;
-        const congestionLevel = stationData.congestion ?
-            stationData.congestion.level : '未知';
-        const congestionColor = stationData.congestion ?
-            stationData.congestion.color : '#999999';
+        // 获取客流数据（用于计算拥堵等级）
+        const passengers = stationData.passengers !== undefined ? stationData.passengers : 0;
 
-        // 【修改点1】获取线路颜色
-        const lineColor = this.currentLine?.color || congestionColor;
+        // 根据客流人数计算拥堵等级
+        function calculateCongestion(passengers) {
+            if (passengers <= 200) {
+                return { level: '畅通', color: '#10b981' };
+            } else if (passengers <= 500) {
+                return { level: '舒适', color: '#3b82f6' };
+            } else if (passengers <= 1000) {
+                return { level: '繁忙', color: '#f59e0b' };
+            } else if (passengers <= 2000) {
+                return { level: '拥挤', color: '#ef4444' };
+            } else {
+                return { level: '拥堵', color: '#dc2626' };
+            }
+        }
 
-        // 【修改点2】重新设计tooltip内容，合并客流等级和状态
+        // 使用计算出的拥堵等级，确保数据一致性
+        const congestion = stationData.congestion || calculateCongestion(passengers);
+        const congestionLevel = congestion.level;
+        const congestionColor = congestion.color;
+
+        // 辅助函数：根据拥堵等级获取小人图标
+        const getPeopleIcons = (level) => {
+            const mapping = {
+                '畅通': 1,
+                '舒适': 2,
+                '繁忙': 3,
+                '拥挤': 4,
+                '拥堵': 5,
+                '未知': 0
+            };
+
+            const count = mapping[level] || 0;
+            if (count === 0) return '<span style="color: #999;">未知</span>';
+
+            // 使用Font Awesome的人物图标
+            let icons = '';
+            for (let i = 0; i < count; i++) {
+                icons += '<i class="fas fa-male" style="margin: 0 1px; color: ' + congestionColor + '"></i>';
+            }
+            return icons;
+        };
+
+        const peopleIcons = getPeopleIcons(congestionLevel);
+
+        // 重新设计tooltip内容，只显示小人图标和状态
         this.tooltipElement.innerHTML = `
         <div class="tooltip-content">
-            <div class="station-name" style="color: #fff; font-size: 20px; font-weight: bold; margin-bottom: 8px; text-shadow: ">
+            <div class="station-name" style="color: #fff; font-size: 18px; font-weight: bold; margin-bottom: 12px;">
                 ${stationData.stationName}
             </div>
-            <div class="station-stats" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <div class="passenger-count">
-                    <span style="color: #ccc;font-size: 16px">客流量：<span style="font-weight: bold; font-size: 18px; color: #fff;">${passengers.toLocaleString()}</span> 人</span>
+            <div class="station-stats" style="margin-bottom: 10px;">
+                <div class="congestion-level" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span style="color: #ccc; font-size: 14px;">拥挤程度:</span>
+                    <span style="font-weight: bold; font-size: 18px;">${peopleIcons}</span>
                 </div>
             </div>
             <div class="station-status" style="display: flex; align-items: center; gap: 8px;">
-           <span style="font-size: 16px">状态:</span>
-                <div style="width: 16px; height: 16px; background: ${congestionColor}; border-radius: 50%;"></div>
-                <span style="color: ${congestionColor}; font-size: 16px">${congestionLevel}</span>
+                <span style="color: #ccc; font-size: 14px">状态:</span>
+                <div style="width: 12px; height: 12px; background: ${congestionColor}; border-radius: 50%;"></div>
+                <span style="color: ${congestionColor}; font-size: 14px; font-weight: bold;">${congestionLevel}</span>
             </div>
         </div>
     `;
@@ -262,9 +300,9 @@ export class Heatmap {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
 
-        // 【修改点3】调整位置，让tooltip显示在鼠标右下方
-        let left = x + 20;  // 稍微向右偏移
-        let top = y + 20;   // 稍微向下偏移
+        // 调整位置，让tooltip显示在鼠标右下方
+        let left = x + 20;
+        let top = y + 20;
 
         // 水平方向：如果超出右侧边界，显示在鼠标左侧
         if (left + tooltipRect.width > viewportWidth) {

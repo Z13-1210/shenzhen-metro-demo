@@ -16,19 +16,38 @@ export function renderStationList(stations, containerId, stationsData) {
         return;
     }
 
+    // 辅助函数：根据拥堵等级获取带颜色的小人图标
+    function getPeopleIcons(level, color) {
+        const mapping = {
+            '畅通': 1,
+            '舒适': 2,
+            '繁忙': 3,
+            '拥挤': 4,
+            '拥堵': 5,
+            '未知': 0
+        };
+
+        const count = mapping[level] || 0;
+        if (count === 0) return '<span class="unknown-text">未知</span>';
+
+        // 创建带颜色的小人图标
+        let icons = '';
+        for (let i = 0; i < count; i++) {
+            icons += `<i class="fas fa-male" style="color: ${color}"></i>`;
+        }
+
+        return icons;
+    }
+
     // 为每个站点创建一个列表项
     stations.forEach((station, index) => {
-        // 从station参数中提取站点名称
         let stationName;
 
         if (typeof station === 'string') {
-            // 如果station是字符串，直接使用
             stationName = station;
         } else if (station && typeof station === 'object' && station.name) {
-            // 如果station是对象且有name属性
             stationName = station.name;
         } else {
-            // 其他情况，尝试转换为字符串
             stationName = String(station);
         }
 
@@ -42,7 +61,6 @@ export function renderStationList(stations, containerId, stationsData) {
         if (stationsData && stationsData[index]) {
             stationData = stationsData[index];
         } else {
-            // 如果没有实时数据，创建默认数据
             stationData = {
                 stationName: stationName,
                 passengers: 0,
@@ -50,13 +68,15 @@ export function renderStationList(stations, containerId, stationsData) {
             };
         }
 
-        // 确保stationData中有stationName
         if (!stationData.stationName) {
             stationData.stationName = stationName;
         }
 
         // 计算客流百分比用于进度条
         const passengerPercentage = Math.min(100, Math.floor((stationData.passengers / 2000) * 100));
+
+        // 获取带颜色的小人图标
+        const peopleIcons = getPeopleIcons(stationData.congestion.level, stationData.congestion.color);
 
         stationItem.innerHTML = `
             <div class="station-header">
@@ -69,7 +89,7 @@ export function renderStationList(stations, containerId, stationsData) {
             <div class="station-details">
                 <div class="passenger-count">
                     <i class="fas fa-users"></i> 
-                    <span class="passenger-number">${stationData.passengers.toLocaleString()}</span> 人
+                    <span class="passenger-level-icons">${peopleIcons}</span>
                 </div>
                 <div class="passenger-indicator">
                     <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${stationData.congestion.color}"></div>
@@ -79,14 +99,11 @@ export function renderStationList(stations, containerId, stationsData) {
 
         // 添加点击事件
         stationItem.addEventListener('click', () => {
-            // 高亮选中的站点
             document.querySelectorAll('.station-item').forEach(item => {
                 item.classList.remove('active');
             });
             stationItem.classList.add('active');
-
-            // 可以在这里添加其他点击处理逻辑
-            console.log(`选中站点: ${stationData.stationName}, 客流量: ${stationData.passengers}`);
+            console.log(`选中站点: ${stationData.stationName}, 拥挤程度: ${stationData.congestion.level}`);
         });
 
         // 添加键盘支持

@@ -607,3 +607,98 @@ body.dark-mode .sidebar-header {
     text-align: center;
 }
 
+/* 小人图标样式 */
+.passenger-level-icons {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+    margin-left: 8px;
+}
+
+.passenger-level-icons i {
+    font-size: 14px;
+    color: #666;
+}
+
+/* 黑暗模式下的颜色调整 */
+body.dark-mode .passenger-level-icons i {
+    color: #ccc;
+}
+
+/* 未知状态的文本样式 */
+.unknown-text {
+    color: #999;
+    font-size: 14px;
+}
+
+body.dark-mode .unknown-text {
+    color: #888;
+}
+
+/* 调整站点详情布局 */
+.station-details {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.passenger-count {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+/* 小人图标样式更新 */
+.passenger-level-icons {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+    margin-left: 8px;
+}
+
+.passenger-level-icons i {
+    font-size: 16px;
+    color: #666;
+}
+
+/* 黑暗模式下的颜色调整 */
+body.dark-mode .passenger-level-icons i {
+    color: #ccc;
+}
+
+/* 未知状态的文本样式 */
+.unknown-text {
+    color: #999;
+    font-size: 14px;
+}
+
+body.dark-mode .unknown-text {
+    color: #888;
+}
+
+/* 调整站点详情布局 */
+.station-details {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.passenger-count {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+/* 搜索结果的站点样式 */
+#station-list .station-item {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+}
+

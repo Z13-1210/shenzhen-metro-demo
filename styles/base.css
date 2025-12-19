@@ -1,3 +1,15 @@
+/*组件样式*/
+@import "components.css";
+
+/*布局样式*/
+@import "layout.css";
+
+/*响应式样式*/
+@import "responsive.css";
+
+/*实用工具样式*/
+@import "utilities.css";
+
 /*
     base.css
     基础变量和全局样式
@@ -87,3 +99,4 @@ body.dark-mode {
     background-color: var(--dark-bg);
     color: var(--text-light);
 }
+
