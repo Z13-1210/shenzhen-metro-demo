@@ -357,6 +357,13 @@ body.dark-mode .station-item {
     text-align: center;
 }
 
+.dark-mode .station-number,
+.dark-mode .passenger-count p,
+.dark-mode .station-lines span,
+.dark-mode .passenger-source-info{
+    color: #fff;
+}
+
 .station-name {
     font-size: var(--text-base);
     font-weight: 500;
@@ -408,6 +415,7 @@ body.dark-mode .passenger-number {
 .passenger-indicator {
     width: 100%;
     height: 6px;
+    margin-top: 10px;
     background: var(--border-color);
     border-radius: 3px;
     overflow: hidden;
@@ -698,7 +706,6 @@ body.dark-mode .unknown-text {
 /* 搜索结果的站点样式 */
 #station-list .station-item {
     width: 100%;
-    max-width: 300px;
     margin: 0 auto;
 }
 

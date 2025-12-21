@@ -285,6 +285,9 @@ function showSingleStationOnly(stationInfo) {
     currentView = 'station';
     currentDisplayedStation = stationInfo;
 
+    // 更新页面标题为站点名称和线路信息
+    updateStationPageTitle(stationInfo);
+
     // 使用当前应用中的实时数据服务
     const realtimeService = realtimeDataService;
 
@@ -422,10 +425,10 @@ function showSingleStationOnly(stationInfo) {
     let lineBadgesHTML = '';
     if (stationInfo.lines && stationInfo.lines.length > 0) {
         lineBadgesHTML = `
-            <div class="station-lines" style="margin-top: 10px;">
-                <span style="color: #666; font-size: 14px; margin-right: 8px;">所属线路:</span>
+            <div class="station-lines" style="margin-top: 10px;display: flex; flex-wrap: wrap">
+                <span style="font-size: 14px; margin-right: 8px;">途径线路:</span>
                 ${stationInfo.lines.map(line =>
-            `<span class="line-badge" style="background: ${line.color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-right: 5px;">${line.name}</span>`
+            `<span class="line-badge" style="background: ${line.color}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin: 0 10px 10px 0;">${line.name}</span>`
         ).join('')}
             </div>
         `;
@@ -435,9 +438,8 @@ function showSingleStationOnly(stationInfo) {
     let passengerSourceInfo = '';
     if (stationInfo.lines && stationInfo.lines.length > 1) {
         passengerSourceInfo = `
-            <div class="passenger-source-info" style="margin-top: 8px; font-size: 12px; color: #666;">
-                <i class="fas fa-info-circle"></i>
-                此客流数据为 ${stationInfo.lines.length} 条线路的总客流
+            <div class="passenger-source-info" style="font-size: 12px;">
+                注：此客流数据为 ${stationInfo.lines.length} 条线路的总客流
             </div>
         `;
     }
@@ -452,24 +454,20 @@ function showSingleStationOnly(stationInfo) {
         <div class="station-header">
             <div class="station-name">${stationInfo.name}</div>
             <div class="congestion-badge" style="background: ${congestionColor}">
+
                 ${congestionEmoji} ${congestionLevel}
             </div>
         </div>
         <div class="station-details">
             <div class="passenger-count">
-                <i class="fas fa-users"></i> 
+                <p>拥挤程度；</p>
                 <span class="passenger-level-icons">${peopleIcons}</span>
-                <span class="passenger-number" style="margin-left: 8px; font-weight: bold;">${totalPassengers}人</span>
             </div>
             <div class="passenger-indicator">
                 <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${congestionColor}"></div>
             </div>
             ${lineBadgesHTML}
             ${passengerSourceInfo}
-            <div class="passenger-trend">
-                <i class="fas fa-chart-line"></i>
-                实时客流状态
-            </div>
         </div>
     `;
 
@@ -487,6 +485,25 @@ function showSingleStationOnly(stationInfo) {
     }, 10);
 }
 
+// 更新页面标题为站点名称和线路信息
+function updateStationPageTitle(stationInfo) {
+    const titleElement = document.querySelector('header h1');
+    if (titleElement) {
+        // 生成线路名称列表
+        let lineNames = '';
+        if (stationInfo.lines && stationInfo.lines.length > 0) {
+            lineNames = stationInfo.lines.map(line => {
+                // 使用lines.json中定义的线路颜色
+                return `<span style="color: ${line.color}">${line.name}</span>`;
+            }).join(', ');
+        }
+
+        titleElement.innerHTML = `
+            <i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统 
+            <span class="current-line">| ${stationInfo.name} (${lineNames})</span>
+        `;
+    }
+}
 
 // 初始化搜索功能
 function initSearch() {
@@ -655,6 +672,12 @@ function initSearch() {
                             color: lines[0].color // 使用第一条线路的颜色
                         });
 
+                        // 清空搜索框内容
+                        searchInput.value = '';
+                        
+                        // 清空搜索结果面板，避免再次点击搜索框时显示旧结果
+                        searchResults.innerHTML = '';
+                        
                         // 隐藏搜索结果
                         searchResults.style.display = 'none';
                     }
@@ -678,7 +701,12 @@ function addDynamicStyles() {
             padding: 5px 15px;
             font-weight: 600;
             margin-left: 10px;
+            color: #000;
         }   
+        
+        .dark-mode .current-line{
+            color: #fff;
+        }
         
         .congestion-badge {
             display: inline-block;
@@ -713,7 +741,7 @@ function addDynamicStyles() {
        
        .dark-mode .passenger-total{
             color: #fff;
-       }
+       }    
         
         .passenger-trend {
             font-size: 0.85rem;

@@ -80,7 +80,7 @@ export function renderStationList(stations, containerId, stationsData) {
 
         stationItem.innerHTML = `
             <div class="station-header">
-                <div class="station-number">${index + 1}</div>
+                <div class="station-number">${index + 1} .</div>
                 <div class="station-name">${stationData.stationName}</div>
                 <div class="congestion-badge" style="background: ${stationData.congestion.color}">
                     ${stationData.congestion.emoji || ''} ${stationData.congestion.level}
@@ -88,7 +88,7 @@ export function renderStationList(stations, containerId, stationsData) {
             </div>
             <div class="station-details">
                 <div class="passenger-count">
-                    <i class="fas fa-users"></i> 
+                     <p>拥挤程度；</p>
                     <span class="passenger-level-icons">${peopleIcons}</span>
                 </div>
                 <div class="passenger-indicator">
