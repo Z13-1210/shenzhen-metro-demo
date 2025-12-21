@@ -321,7 +321,7 @@ body.dark-mode .results-count {
 /* 站点列表 */
 #station-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: var(--spacing-md);
     padding: var(--spacing-sm);
 }
