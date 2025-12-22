@@ -21,7 +21,13 @@ export function renderLineList(lines, containerId, onLineClick) {
     lines.forEach( line => {
         const lineButton = document.createElement('div');
         lineButton.className = 'line-item';
-        lineButton.textContent = line.name;
+        
+        // 将文本包装在span中，以便设置z-index
+        const textSpan = document.createElement('span');
+        textSpan.textContent = line.name;
+        textSpan.className = 'line-item-text';
+        lineButton.appendChild(textSpan);
+        
         // 存储线路ID和颜色，供CSS使用
         lineButton.style.setProperty('--line-color', line.color);
 

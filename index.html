@@ -10,46 +10,11 @@
 </head>
 <body>
 <div class="app-container">
-    <!-- 汉堡菜单按钮 -->
-    <button class="hamburger-menu" id="hamburger-menu" aria-label="切换菜单">
-        <i class="fas fa-bars"></i>
-    </button>
-
-    <!-- 固定在左侧的侧边栏 -->
-    <div class="fixed-sidebar" id="fixed-sidebar">
-        <div class="sidebar-header">
-            <h2><i class="fas fa-subway"></i>  深圳地铁</h2>
-            <button class="close-sidebar" id="close-sidebar" aria-label="关闭菜单">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <div class="sidebar-content">
-            <!-- 线路导航部分 -->
-            <section class="sidebar-section">
-                <h3 class="sidebar-subtitle">
-                    <i class="fas fa-list"></i> 地铁线路
-                </h3>
-                <div id="line-list" role="list" aria-label="地铁线路列表"></div>
-            </section>
-        </div>
-    </div>
-
-    <!-- 侧边栏遮罩层 -->
-    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <header>
         <h1><i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统</h1>
         <div class="header-controls">
             <p class="subtitle" >基于原生JavaScript开发的可视化项目 | 数据更新时间: <span id="update-time">--:--:--</span></p>
-<!--            <button class="theme-toggle" id="theme-toggle" aria-label="切换主题">-->
-<!--                <i class="fas fa-moon"></i>-->
-<!--            </button>-->
-            <!-- 搜索模块移到右上角 -->
-            <div class="header-search">
-                <input type="text" id="search-input" placeholder="输入站点名称..." aria-label="搜索站点">
-                <div id="search-results" role="list" aria-label="搜索结果"></div>
-            </div>
         </div>
     </header>
 
@@ -59,7 +24,40 @@
             <div class="main-content full-width">
                 <!-- 线路站点详情 -->
                 <section class="panel" aria-labelledby="station-list-title">
-                    <h2 id="station-list-title"><i class="fas fa-map-marked-alt"></i> 线路站点详情</h2>
+                    <div class="panel-header">
+                        <h2 id="station-list-title"><i class="fas fa-map-marked-alt"></i> 线路站点详情</h2>
+                        <div class="panel-header-controls">
+                            <div class="search-wrapper">
+                                <i class="fas fa-search search-icon"></i>
+                                <input type="text" id="search-input" placeholder="输入站点名称..." aria-label="搜索站点">
+                                <div id="search-results" role="list" aria-label="搜索结果" style="display: none;"></div>
+                            </div>
+                            <div class="line-dropdown">
+                                <button class="line-btn" id="line-toggle">
+                                    <i class="fas fa-subway"></i> 线路选择
+                                    <i class="fas fa-chevron-down line-arrow"></i>
+                                </button>
+                                <div class="line-options" id="line-options"></div>
+                            </div>
+                            <div class="sort-dropdown">
+                                <button class="sort-btn" id="sort-toggle">
+                                    <i class="fas fa-sort"></i> 排序方式
+                                    <i class="fas fa-chevron-down sort-arrow"></i>
+                                </button>
+                                <div class="sort-options" id="sort-options">
+                                    <div class="sort-option active" data-sort="default">
+                                        <i class="fas fa-arrow-up"></i> 上行
+                                    </div>
+                                    <div class="sort-option" data-sort="reverse">
+                                        <i class="fas fa-arrow-down"></i> 下行
+                                    </div>
+                                    <div class="sort-option" data-sort="passengers">
+                                        <i class="fas fa-users"></i> 客流量
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div id="station-list" role="list" aria-label="站点详情列表"></div>
                 </section>
             </div>
@@ -70,20 +68,6 @@
             <div class="heatmap-container">
                 <div class="heatmap-header">
                     <h3><i class="fas fa-fire" style="color: red"></i> 实时客流热力图</h3>
-<!--                    <div class="heatmap-stats">-->
-<!--                        <div class="stat-item">-->
-<!--                            <span class="stat-label">总客流</span>-->
-<!--                            <span id="total-passengers" class="stat-value">0</span>-->
-<!--                        </div>-->
-<!--                        <div class="stat-item">-->
-<!--                            <span class="stat-label">平均</span>-->
-<!--                            <span id="avg-passengers" class="stat-value">0</span>-->
-<!--                        </div>-->
-<!--                        <div class="stat-item">-->
-<!--                            <span class="stat-label">峰值</span>-->
-<!--                            <span id="peak-passengers" class="stat-value">0</span>-->
-<!--                        </div>-->
-<!--                    </div>-->
                 </div>
                 <canvas id="heatmap-canvas" width="1200" height="500"></canvas>
             </div>

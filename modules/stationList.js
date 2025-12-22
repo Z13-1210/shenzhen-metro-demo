@@ -1,5 +1,11 @@
 // modules/stationList.js
 
+// 全局变量保存原始数据
+let originalStationsData = null;
+let originalStations = null;
+let currentContainerId = null;
+let currentSortMode = 'default'; // 新增：保存当前排序模式
+
 export function renderStationList(stations, containerId, stationsData) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -7,11 +13,35 @@ export function renderStationList(stations, containerId, stationsData) {
         return;
     }
 
+    // 保存原始数据用于排序
+    originalStations = stations;
+    originalStationsData = stationsData;
+    currentContainerId = containerId;
+
+    // 根据当前排序模式决定如何渲染
+    let displayStations = stations;
+    let displayData = stationsData;
+
+    if (currentSortMode === 'passengers' && stationsData) {
+        // 如果当前是客流量排序，则应用排序
+        const indices = stationsData
+            .map((data, index) => ({ index, passengers: data.passengers || 0 }))
+            .sort((a, b) => b.passengers - a.passengers)
+            .map(item => item.index);
+        
+        displayStations = indices.map(i => stations[i]);
+        displayData = indices.map(i => stationsData[i]);
+    } else if (currentSortMode === 'reverse') {
+        // 如果是反向排序，则反转数组
+        displayStations = [...stations].reverse();
+        displayData = stationsData ? [...stationsData].reverse() : null;
+    }
+
     // 清空容器
     container.innerHTML = '';
 
     // 如果没有站点数据，显示提示
-    if (!stations || stations.length === 0) {
+    if (!displayStations || displayStations.length === 0) {
         container.innerHTML = '<p class="no-data">暂无站点数据</p>';
         return;
     }
@@ -40,7 +70,7 @@ export function renderStationList(stations, containerId, stationsData) {
     }
 
     // 为每个站点创建一个列表项
-    stations.forEach((station, index) => {
+    displayStations.forEach((station, index) => {
         let stationName;
 
         if (typeof station === 'string') {
@@ -58,8 +88,8 @@ export function renderStationList(stations, containerId, stationsData) {
 
         // 获取对应的实时数据
         let stationData = null;
-        if (stationsData && stationsData[index]) {
-            stationData = stationsData[index];
+        if (displayData && displayData[index]) {
+            stationData = displayData[index];
         } else {
             stationData = {
                 stationName: stationName,
@@ -118,10 +148,52 @@ export function renderStationList(stations, containerId, stationsData) {
     });
 
     // 默认选中第一个站点
-    if (stations.length > 0) {
+    if (displayStations.length > 0) {
         const firstStation = container.querySelector('.station-item');
         if (firstStation) {
             firstStation.classList.add('active');
         }
     }
+}
+
+// 排序函数 - 按客流量排序
+export function sortStationsByPassengers() {
+    if (!originalStations || !originalStationsData || !currentContainerId) {
+        console.warn('没有可排序的数据');
+        return;
+    }
+
+    // 设置排序模式为客流量
+    currentSortMode = 'passengers';
+
+    // 重新渲染（renderStationList内部会根据currentSortMode自动排序）
+    renderStationList(originalStations, currentContainerId, originalStationsData);
+}
+
+// 恢复默认排序
+export function sortStationsDefault() {
+    if (!originalStations || !originalStationsData || !currentContainerId) {
+        console.warn('没有可排序的数据');
+        return;
+    }
+
+    // 设置排序模式为默认
+    currentSortMode = 'default';
+
+    // 重新渲染
+    renderStationList(originalStations, currentContainerId, originalStationsData);
+}
+
+// 下行排序（反转默认排序）
+export function sortStationsReverse() {
+    if (!originalStations || !originalStationsData || !currentContainerId) {
+        console.warn('没有可排序的数据');
+        return;
+    }
+
+    // 设置排序模式为反向
+    currentSortMode = 'reverse';
+
+    // 重新渲染
+    renderStationList(originalStations, currentContainerId, originalStationsData);
 }

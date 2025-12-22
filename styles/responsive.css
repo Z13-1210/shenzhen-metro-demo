@@ -54,26 +54,6 @@
         height: 300px;
     }
 
-    .heatmap-stats {
-        gap: 15px;
-        padding: 10px 15px;
-    }
-
-    .fixed-sidebar {
-        width: 280px;
-        left: -280px;
-    }
-
-    .hamburger-menu {
-        top: 185px;
-        left: 10px;
-        width: 40px;
-        height: 40px;
-    }
-
-    .sidebar-content {
-        padding: var(--spacing-md);
-    }
 }
 
 @media (max-width: 480px) {
@@ -126,21 +106,10 @@
         justify-content: space-between;
     }
 
-    .hamburger-menu {
-        top: 165px;
-        left: 10px;
-        width: 35px;
-        height: 35px;
-    }
-
     footer {
         font-size: var(--text-xs);
     }
 
-    .fixed-sidebar {
-        width: 100%;
-        left: -100%;
-    }
 }
 
 @media (min-width: 1400px) {

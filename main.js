@@ -6,7 +6,7 @@
  */
 import {loadLinesData} from './modules/dataLoader.js'
 import {renderLineList} from './modules/lineList.js'
-import {renderStationList} from './modules/stationList.js'
+import {renderStationList, sortStationsByPassengers, sortStationsDefault, sortStationsReverse} from './modules/stationList.js'
 import {realtimeDataService} from './modules/realtimeData.js'
 import Heatmap from './modules/heatmap.js'
 
@@ -194,56 +194,9 @@ function updateRealtimeDataForLine(line) {
     // 更新站点列表显示
     renderStationList(line.stations, 'station-list', stationsData);
 
-    // 更新热力图（使用新的Heatmap类）
+    // 更新热力图
     if (heatmap) {
-        const stats = heatmap.draw(stationsData, line);
-
-        // 【修改点】使用新增的 updateHeatmapStatsUI 函数
-        updateHeatmapStatsUI(stats || calculateHeatmapStats(stationsData));
-    } else {
-        // 如果热力图未初始化，手动计算并显示统计数据
-        updateHeatmapStatsUI(calculateHeatmapStats(stationsData));
-    }
-}
-
-// 【新增】计算热力图统计数据
-function calculateHeatmapStats(stationsData) {
-    if (!stationsData || stationsData.length === 0) {
-        return { total: 0, avg: 0, peak: 0 };
-    }
-
-    const passengers = stationsData.map(data => data.passengers || 0);
-    const total = passengers.reduce((sum, p) => sum + p, 0);
-    const avg = Math.round(total / passengers.length);
-    const peak = Math.max(...passengers);
-
-    return { total, avg, peak };
-}
-
-// 【新增】更新热力图统计数据的UI显示
-function updateHeatmapStatsUI(stats) {
-    console.log('更新统计数据:', stats);
-
-    const totalEl = document.getElementById('total-passengers');
-    const avgEl = document.getElementById('avg-passengers');
-    const peakEl = document.getElementById('peak-passengers');
-
-    if (totalEl) {
-        totalEl.textContent = stats.total ? stats.total.toLocaleString() : '0';
-    } else {
-        console.warn('未找到总客流元素 #total-passengers');
-    }
-
-    if (avgEl) {
-        avgEl.textContent = stats.avg ? stats.avg.toLocaleString() : '0';
-    } else {
-        console.warn('未找到平均客流元素 #avg-passengers');
-    }
-
-    if (peakEl) {
-        peakEl.textContent = stats.peak ? stats.peak.toLocaleString() : '0';
-    } else {
-        console.warn('未找到峰值客流元素 #peak-passengers');
+        heatmap.draw(stationsData, line);
     }
 }
 
@@ -252,16 +205,24 @@ function startRealtimeUpdates() {
     // 清除已有定时器
     if (updateInterval) clearInterval(updateInterval);
 
-    // 每15秒更新一次数据
+    console.log('启动实时更新，当前视图:', currentView);
+
+    // 每1秒更新一次数据
     updateInterval = setInterval(() => {
-        if (currentSelectedLine && currentView === 'line') {
+        if (currentView === 'line' && currentSelectedLine) {
+            // 线路视图：更新线路数据
             updateRealtimeDataForLine(currentSelectedLine);
+        } else if (currentView === 'station' && currentDisplayedStation) {
+            // 单站点视图：只更新数据部分，不重建整个DOM
+            updateSingleStationData();
         }
     }, 1000);
 
     // 立即更新一次
-    if (currentSelectedLine && currentView === 'line') {
+    if (currentView === 'line' && currentSelectedLine) {
         updateRealtimeDataForLine(currentSelectedLine);
+    } else if (currentView === 'station' && currentDisplayedStation) {
+        updateSingleStationData();
     }
 }
 // 更新页面标题
@@ -275,56 +236,33 @@ function updatePageTitle(lineName, lineColor) {
     }
 }
 
-function showSingleStationOnly(stationInfo) {
-    console.log('显示单个站点信息（搜索功能）:', stationInfo);
-
-    const stationContainer = document.getElementById('station-list');
-    if (!stationContainer) return;
-
-    // 设置视图为单站点视图
-    currentView = 'station';
-    currentDisplayedStation = stationInfo;
-
-    // 更新页面标题为站点名称和线路信息
-    updateStationPageTitle(stationInfo);
-
-    // 使用当前应用中的实时数据服务
+// 计算单站点客流（提取为独立函数以便复用）
+function calculateSingleStationPassengers(stationInfo) {
     const realtimeService = realtimeDataService;
-
-    // 为这个站点计算新的实时数据
     let totalPassengers = 0;
     let calculatedStations = 0;
 
     // 遍历该站点的所有线路
     if (stationInfo.lines && stationInfo.lines.length > 0) {
-        console.log('计算站点客流，所属线路数:', stationInfo.lines.length);
-
-        stationInfo.lines.forEach((line, index) => {
-            // 获取线路信息 - 从当前应用的线路数据中查找
+        stationInfo.lines.forEach((line) => {
+            // 获取线路信息
             const lineInfo = currentLines.find(l =>
                 l.id === line.id || l.name === line.name
             );
 
             if (!lineInfo || !lineInfo.stations) {
-                console.warn(`未找到线路数据: ${line.name || line.id}`);
                 return;
             }
 
-            console.log(`处理线路 ${lineInfo.name}，站点数: ${lineInfo.stations.length}`);
-
             // 找到该站点在线路中的索引
             let stationIndex = -1;
-            let stationObject = null;
 
-            // 在站点数组中查找匹配的站点
             for (let i = 0; i < lineInfo.stations.length; i++) {
                 const station = lineInfo.stations[i];
 
-                // 站点可能是字符串或对象
                 if (typeof station === 'string') {
                     if (station === stationInfo.name) {
                         stationIndex = i;
-                        stationObject = { name: station };
                         break;
                     }
                 } else if (station && typeof station === 'object') {
@@ -332,17 +270,13 @@ function showSingleStationOnly(stationInfo) {
                         station.id === stationInfo.id ||
                         (station.stationName && station.stationName === stationInfo.name)) {
                         stationIndex = i;
-                        stationObject = station;
                         break;
                     }
                 }
             }
 
             if (stationIndex !== -1) {
-                console.log(`在线路 ${lineInfo.name} 中找到站点 ${stationInfo.name}，索引: ${stationIndex}`);
-
                 try {
-                    // 使用实时数据服务计算该站点的客流
                     const stationData = realtimeService.calculateStationPassengers(
                         stationInfo.name,
                         lineInfo.name,
@@ -352,62 +286,70 @@ function showSingleStationOnly(stationInfo) {
 
                     totalPassengers += stationData.passengers || 0;
                     calculatedStations++;
-
-                    console.log(`线路 ${lineInfo.name} 客流: ${stationData.passengers}, 累计: ${totalPassengers}`);
                 } catch (error) {
                     console.error('计算客流时出错:', error);
                 }
-            } else {
-                console.warn(`在线路 ${lineInfo.name} 中未找到站点 ${stationInfo.name}`);
             }
         });
     }
 
     // 如果没有找到任何线路数据，使用默认值
     if (calculatedStations === 0) {
-        console.log('未找到站点数据，使用默认值');
-        totalPassengers = Math.floor(Math.random() * 800) + 200; // 200-1000人的合理范围
+        totalPassengers = Math.floor(Math.random() * 800) + 200;
     }
 
-    console.log(`站点 ${stationInfo.name} 总客流: ${totalPassengers}, 来自 ${calculatedStations} 条线路`);
+    return totalPassengers;
+}
 
-    // 辅助函数：根据客流人数计算拥堵等级
-    function calculateCongestion(passengers) {
-        if (passengers <= 200) {
-            return { level: '畅通', color: '#10b981', emoji: '😌' };
-        } else if (passengers <= 500) {
-            return { level: '舒适', color: '#3b82f6', emoji: '😊' };
-        } else if (passengers <= 1000) {
-            return { level: '繁忙', color: '#f59e0b', emoji: '😐' };
-        } else if (passengers <= 2000) {
-            return { level: '拥挤', color: '#ef4444', emoji: '😟' };
-        } else {
-            return { level: '拥堵', color: '#dc2626', emoji: '😫' };
-        }
+// 辅助函数：根据客流人数计算拥堵等级
+function calculateCongestion(passengers) {
+    if (passengers <= 200) {
+        return { level: '畅通', color: '#10b981', emoji: '😌' };
+    } else if (passengers <= 500) {
+        return { level: '舒适', color: '#3b82f6', emoji: '😊' };
+    } else if (passengers <= 1000) {
+        return { level: '繁忙', color: '#f59e0b', emoji: '😐' };
+    } else if (passengers <= 2000) {
+        return { level: '拥挤', color: '#ef4444', emoji: '😟' };
+    } else {
+        return { level: '拥堵', color: '#dc2626', emoji: '😫' };
+    }
+}
+
+// 辅助函数：根据拥堵等级获取带颜色的小人图标
+function getPeopleIcons(level, color) {
+    const mapping = {
+        '畅通': 1,
+        '舒适': 2,
+        '繁忙': 3,
+        '拥挤': 4,
+        '拥堵': 5,
+        '未知': 0
+    };
+
+    const count = mapping[level] || 0;
+    if (count === 0) return '<span class="unknown-text">未知</span>';
+
+    let icons = '';
+    for (let i = 0; i < count; i++) {
+        icons += `<i class="fas fa-male" style="color: ${color}"></i>`;
     }
 
-    // 辅助函数：根据拥堵等级获取带颜色的小人图标
-    function getPeopleIcons(level, color) {
-        const mapping = {
-            '畅通': 1,
-            '舒适': 2,
-            '繁忙': 3,
-            '拥挤': 4,
-            '拥堵': 5,
-            '未知': 0
-        };
+    return icons;
+}
 
-        const count = mapping[level] || 0;
-        if (count === 0) return '<span class="unknown-text">未知</span>';
-
-        // 创建带颜色的小人图标
-        let icons = '';
-        for (let i = 0; i < count; i++) {
-            icons += `<i class="fas fa-male" style="color: ${color}"></i>`;
-        }
-
-        return icons;
+// 更新单站点的实时数据（不重建整个HTML）
+function updateSingleStationData() {
+    if (!currentDisplayedStation) {
+        return;
     }
+
+    console.log('更新单站点实时数据:', currentDisplayedStation.name);
+
+    // 重新计算客流
+    const totalPassengers = calculateSingleStationPassengers(currentDisplayedStation);
+
+    console.log(`站点 ${currentDisplayedStation.name} 更新客流: ${totalPassengers}`);
 
     // 根据总客流量计算拥堵等级
     const congestion = calculateCongestion(totalPassengers);
@@ -418,7 +360,75 @@ function showSingleStationOnly(stationInfo) {
     // 计算客流百分比（用于进度条显示）
     const passengerPercentage = Math.min(100, Math.floor((totalPassengers / 2500) * 100));
 
-    // 获取带颜色的小人图标（使用重新计算的颜色）
+    // 获取带颜色的小人图标
+    const peopleIcons = getPeopleIcons(congestionLevel, congestionColor);
+
+    // 更新DOM元素
+    const stationContainer = document.getElementById('station-list');
+    if (!stationContainer) return;
+
+    const stationItem = stationContainer.querySelector('.station-item');
+    if (!stationItem) {
+        // 如果没有站点项，调用完整显示函数
+        showSingleStationOnly(currentDisplayedStation);
+        return;
+    }
+
+    // 更新拥堵徽章
+    const congestionBadge = stationItem.querySelector('.congestion-badge');
+    if (congestionBadge) {
+        congestionBadge.style.background = congestionColor;
+        congestionBadge.innerHTML = `${congestionEmoji} ${congestionLevel}`;
+    }
+
+    // 更新小人图标
+    const passengerLevelIcons = stationItem.querySelector('.passenger-level-icons');
+    if (passengerLevelIcons) {
+        passengerLevelIcons.innerHTML = peopleIcons;
+    }
+
+    // 更新进度条
+    const passengerLevel = stationItem.querySelector('.passenger-level');
+    if (passengerLevel) {
+        passengerLevel.style.width = `${passengerPercentage}%`;
+        passengerLevel.style.background = congestionColor;
+    }
+}
+
+function showSingleStationOnly(stationInfo) {
+    console.log('显示单个站点信息（搜索功能）:', stationInfo);
+
+    const stationContainer = document.getElementById('station-list');
+    if (!stationContainer) return;
+
+    // 设置视图为单站点视图
+    currentView = 'station';
+    currentDisplayedStation = stationInfo;
+
+    // 隐藏排序按钮（单站点视图不需要排序）
+    const sortControls = document.querySelector('.sort-dropdown');
+    if (sortControls) {
+        sortControls.style.display = 'none';
+    }
+
+    // 更新页面标题为站点名称和线路信息
+    updateStationPageTitle(stationInfo);
+
+    // 计算客流
+    const totalPassengers = calculateSingleStationPassengers(stationInfo);
+
+    console.log(`站点 ${stationInfo.name} 总客流: ${totalPassengers}`);
+
+    // 根据总客流量计算拥堵等级
+    const congestion = calculateCongestion(totalPassengers);
+    const congestionLevel = congestion.level;
+    const congestionColor = congestion.color;
+    const congestionEmoji = congestion.emoji;
+
+    // 计算客流百分比（用于进度条显示）
+    const passengerPercentage = Math.min(100, Math.floor((totalPassengers / 2500) * 100));
+
+    // 获取带颜色的小人图标
     const peopleIcons = getPeopleIcons(congestionLevel, congestionColor);
 
     // 生成线路标识
@@ -502,6 +512,21 @@ function updateStationPageTitle(stationInfo) {
             <i class="fas fa-subway"></i> 深圳地铁实时客流模拟系统 
             <span class="current-line">| ${stationInfo.name} (${lineNames})</span>
         `;
+    }
+}
+
+// 清空搜索框和搜索结果
+function clearSearch() {
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+
+    if (searchInput) {
+        searchInput.value = '';
+    }
+
+    if (searchResults) {
+        searchResults.innerHTML = '';
+        searchResults.style.display = 'none';
     }
 }
 
@@ -672,14 +697,8 @@ function initSearch() {
                             color: lines[0].color // 使用第一条线路的颜色
                         });
 
-                        // 清空搜索框内容
-                        searchInput.value = '';
-                        
-                        // 清空搜索结果面板，避免再次点击搜索框时显示旧结果
-                        searchResults.innerHTML = '';
-                        
-                        // 隐藏搜索结果
-                        searchResults.style.display = 'none';
+                        // 清空搜索框和结果
+                        clearSearch();
                     }
                 });
             });
@@ -839,7 +858,6 @@ function toggleTheme(isDarkMode) {
         localStorage.setItem('theme', 'light');
     }
 }
-
 // 初始化回到顶部功能
 function initBackToTop() {
     const backToTopButton = document.getElementById('back-to-top');
@@ -888,51 +906,184 @@ function initHeatmap() {
     }
 }
 
-// 初始化侧边栏功能
-function initSidebar() {
-    const hamburgerMenu = document.getElementById('hamburger-menu');
-    const closeSidebar = document.getElementById('close-sidebar');
-    const fixedSidebar = document.getElementById('fixed-sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
-
-    if (!hamburgerMenu || !fixedSidebar) return;
-
-    // 打开侧边栏
-    function openSidebar() {
-        fixedSidebar.classList.add('active');
-        sidebarOverlay.classList.add('active');
-        document.body.style.overflow = 'hidden'; // 防止背景滚动
+// 初始化排序控件
+function initSortControls() {
+    const sortDropdown = document.querySelector('.sort-dropdown');
+    const sortToggle = document.getElementById('sort-toggle');
+    const sortOptions = document.getElementById('sort-options');
+    
+    if (!sortDropdown || !sortToggle || !sortOptions) {
+        console.warn('排序下拉菜单元素未找到');
+        return;
     }
 
-    // 关闭侧边栏
-    function closeSidebarFunc() {
-        fixedSidebar.classList.remove('active');
-        sidebarOverlay.classList.remove('active');
-        document.body.style.overflow = ''; // 恢复滚动
-    }
-
-    // 汉堡菜单点击事件
-    hamburgerMenu.addEventListener('click', openSidebar);
-
-    // 关闭按钮点击事件
-    if (closeSidebar) {
-        closeSidebar.addEventListener('click', closeSidebarFunc);
-    }
-
-    // 遮罩层点击事件
-    sidebarOverlay.addEventListener('click', closeSidebarFunc);
-
-    // ESC键关闭侧边栏
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && fixedSidebar.classList.contains('active')) {
-            closeSidebarFunc();
+    // 切换下拉菜单显示/隐藏
+    sortToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sortDropdown.classList.toggle('active');
+        
+        // 关闭线路选择下拉菜单
+        const lineDropdown = document.querySelector('.line-dropdown');
+        if (lineDropdown) {
+            lineDropdown.classList.remove('active');
         }
     });
 
-    // 点击线路项时自动关闭侧边栏（移动端）
+    // 点击页面其他地方隐藏下拉菜单
     document.addEventListener('click', (e) => {
-        if (e.target.closest('.line-item') && window.innerWidth <= 768) {
-            setTimeout(closeSidebarFunc, 300);
+        if (!sortDropdown.contains(e.target)) {
+            sortDropdown.classList.remove('active');
+        }
+    });
+
+    // 排序选项点击事件
+    const sortOptionElements = sortOptions.querySelectorAll('.sort-option');
+    sortOptionElements.forEach(option => {
+        option.addEventListener('click', () => {
+            // 移除所有active状态
+            sortOptionElements.forEach(opt => opt.classList.remove('active'));
+            
+            // 添加当前active状态
+            option.classList.add('active');
+            
+            // 获取排序类型
+            const sortType = option.dataset.sort;
+            
+            // 执行相应排序
+            switch(sortType) {
+                case 'default':
+                    sortStationsDefault();
+                    break;
+                case 'reverse':
+                    sortStationsReverse();
+                    break;
+                case 'passengers':
+                    sortStationsByPassengers();
+                    break;
+            }
+            
+            // 隐藏下拉菜单
+            sortDropdown.classList.remove('active');
+        });
+    });
+}
+
+// 初始化线路选择控件
+function initLineControls() {
+    const lineDropdown = document.querySelector('.line-dropdown');
+    const lineToggle = document.getElementById('line-toggle');
+    const lineOptions = document.getElementById('line-options');
+    
+    if (!lineDropdown || !lineToggle || !lineOptions) {
+        console.warn('线路下拉菜单元素未找到');
+        return;
+    }
+
+    // 切换下拉菜单显示/隐藏
+    lineToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        lineDropdown.classList.toggle('active');
+        
+        // 关闭排序下拉菜单
+        const sortDropdown = document.querySelector('.sort-dropdown');
+        if (sortDropdown) {
+            sortDropdown.classList.remove('active');
+        }
+        
+        // 更新线路选项
+        updateLineOptions();
+    });
+
+    // 点击页面其他地方隐藏下拉菜单
+    document.addEventListener('click', (e) => {
+        if (!lineDropdown.contains(e.target)) {
+            lineDropdown.classList.remove('active');
+        }
+    });
+}
+
+// 更新线路选项
+function updateLineOptions() {
+    const lineOptions = document.getElementById('line-options');
+    if (!lineOptions) return;
+
+    // 清空现有选项
+    lineOptions.innerHTML = '';
+
+    // 为每条线路创建一个选项
+    currentLines.forEach(line => {
+        const lineOption = document.createElement('div');
+        lineOption.className = 'line-option';
+        if (currentSelectedLine && currentSelectedLine.id === line.id) {
+            lineOption.classList.add('active');
+        }
+        lineOption.textContent = line.name;
+        lineOption.style.borderLeft = `4px solid ${line.color}`;
+        lineOption.style.marginBottom = '2px';
+
+        // 添加点击事件
+        lineOption.addEventListener('click', () => {
+            // 选中线路
+            selectLine(line);
+            
+            // 隐藏下拉菜单
+            const lineDropdown = document.querySelector('.line-dropdown');
+            if (lineDropdown) {
+                lineDropdown.classList.remove('active');
+            }
+        });
+
+        lineOptions.appendChild(lineOption);
+    });
+}
+
+// 更新线路选项中的活动状态
+function updateLineOptionsActiveState(selectedLine) {
+    const lineOptions = document.querySelectorAll('.line-option');
+    lineOptions.forEach(option => {
+        if (option.textContent === selectedLine.name) {
+            option.classList.add('active');
+        } else {
+            option.classList.remove('active');
+        }
+    });
+}
+
+// 选择线路
+function selectLine(line) {
+    if (!line) return;
+    
+    currentSelectedLine = line;
+    currentView = 'line';
+
+    // 显示排序按钮（线路视图需要排序）
+    const sortControls = document.querySelector('.sort-dropdown');
+    if (sortControls) {
+        sortControls.style.display = 'flex';
+    }
+
+    // 立即更新实时数据并渲染站点列表
+    updateRealtimeDataForLine(line);
+
+    // 更新页面标题
+    updatePageTitle(line.name, line.color);
+
+    // 清空搜索框和结果
+    clearSearch();
+    
+    // 更新线路列表中的活动状态
+    updateLineListActiveState(line);
+}
+
+// 更新线路列表中的活动状态
+function updateLineListActiveState(selectedLine) {
+    // 更新线路下拉菜单中的活动状态
+    const lineOptions = document.querySelectorAll('.line-option');
+    lineOptions.forEach(option => {
+        if (option.textContent === selectedLine.name) {
+            option.classList.add('active');
+        } else {
+            option.classList.remove('active');
         }
     });
 }
@@ -945,9 +1096,6 @@ async function initApp() {
     showLoadingScreen();
 
     try {
-
-        // 初始化侧边栏功能
-        initSidebar();
 
         // 2. 实时更新的当前时间
         updateTime();
@@ -967,44 +1115,50 @@ async function initApp() {
         // 4. 初始化热力图模块（新增）
         initHeatmap();
 
-        // 5. 渲染线路列表
-        renderLineList(currentLines, 'line-list', (selectedLine) => {
-            currentSelectedLine = selectedLine;
-            currentView = 'line';
-
-            // 立即更新实时数据并渲染站点列表
-            updateRealtimeDataForLine(selectedLine);
-
-            // 更新页面标题
-            updatePageTitle(selectedLine.name, selectedLine.color);
-
-            // 清空搜索框内容
-            const searchInput = document.getElementById('search-input');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-
-            // 清空搜索结果
-            const searchResults = document.getElementById('search-results');
-            if (searchResults) {
-                searchResults.innerHTML = '';
-                searchResults.style.display = 'none';
-            }
-        });
+        // 5. 初始化热力图模块（新增）
+        initHeatmap();
 
         // 6. 初始化搜索功能
         initSearch();
 
-        // 7. 开始实时更新
+        // 7. 初始化排序功能
+        initSortControls();
+        
+        // 8. 初始化线路选择功能
+        initLineControls();
+
+        // 9. 默认选择第一条线路并渲染其站点信息
+        if (currentLines.length > 0) {
+            const firstLine = currentLines[0];
+            currentSelectedLine = firstLine;
+            currentView = 'line';
+            
+            // 显示排序按钮
+            const sortControls = document.querySelector('.sort-dropdown');
+            if (sortControls) {
+                sortControls.style.display = 'flex';
+            }
+            
+            // 立即更新实时数据并渲染站点列表
+            updateRealtimeDataForLine(firstLine);
+            
+            // 更新页面标题
+            updatePageTitle(firstLine.name, firstLine.color);
+            
+            // 更新线路下拉菜单中的活动状态
+            updateLineOptionsActiveState(firstLine);
+        }
+
+        // 10. 开始实时更新
         startRealtimeUpdates();
 
-        // 8. 添加移动端触摸支持
+        // 10. 添加移动端触摸支持
         addMobileSupport();
 
-        // 9. 设置应用状态
+        // 11. 设置应用状态
         isAppInitialized = true;
 
-        // 10. 隐藏加载动画
+        // 12. 隐藏加载动画
         hideLoadingScreen();
 
         console.log('应用初始化完成');
