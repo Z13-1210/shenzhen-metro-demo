@@ -242,6 +242,7 @@ body.dark-mode .search-icon {
     background: var(--card-light-bg);
     margin-top: var(--spacing-sm);
     z-index: 1000;
+    display: none;
 }
 
 body.dark-mode .search-wrapper #search-input {
@@ -263,6 +264,8 @@ body.dark-mode .search-wrapper #search-results {
 .sort-dropdown {
     position: relative;
     display: inline-block;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 .sort-btn {
@@ -375,13 +378,15 @@ body.dark-mode .sort-option:hover {
 
 body.dark-mode .sort-option.active {
     background: rgba(129, 140, 248, 0.2);
-    color: #818cf8;
+    color: #adb5f3;
 }
 
 /* 线路选择下拉菜单 */
 .line-dropdown {
     position: relative;
     display: inline-block;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
 }
 
 .line-btn {
@@ -423,7 +428,7 @@ body.dark-mode .sort-option.active {
 .line-options {
     position: absolute;
     top: 100%;
-    right: 0;
+    left: 0;
     background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -435,6 +440,7 @@ body.dark-mode .sort-option.active {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     max-height: 300px;
     overflow-y: auto;
+    right: auto; /* 确保不会同时设置left和right */
 }
 
 .line-dropdown.active .line-options {
@@ -496,7 +502,7 @@ body.dark-mode .line-option:hover {
 
 body.dark-mode .line-option.active {
     background: rgba(129, 140, 248, 0.2);
-    color: #818cf8;
+    color: #adb5f3;
 }
 
 /* 搜索框 */
@@ -614,8 +620,9 @@ body.dark-mode .station-item {
 .dark-mode .station-number,
 .dark-mode .passenger-count p,
 .dark-mode .station-lines span,
-.dark-mode .passenger-source-info{
-    color: #fff;
+.dark-mode .passenger-source-info,
+.dark-mode .station-name{
+    color: #cacaca;
 }
 
 .station-name {
@@ -626,10 +633,6 @@ body.dark-mode .station-item {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-body.dark-mode .station-name {
-    color: var(--text-light);
 }
 
 .congestion-badge {

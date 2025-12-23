@@ -48,6 +48,20 @@ export function renderStationList(stations, containerId, stationsData) {
 
     // 辅助函数：根据拥堵等级获取带颜色的小人图标
     function getPeopleIcons(level, color) {
+        // 检查是否为停运时段
+        const currentTime = new Date();
+        const currentHour = currentTime.getHours();
+        const isOffService = currentHour >= 0 && currentHour < 6; // 00:00-06:00为停运时段
+
+        // 如果是停运状态，显示灰色小人
+        if (level === '已停运' || isOffService) {
+            let icons = '';
+            for (let i = 0; i < 1; i++) {
+                icons += `<i class="fas fa-male" style="color: #64748b"></i>`;
+            }
+            return icons;
+        }
+
         const mapping = {
             '畅通': 1,
             '舒适': 2,
@@ -60,10 +74,13 @@ export function renderStationList(stations, containerId, stationsData) {
         const count = mapping[level] || 0;
         if (count === 0) return '<span class="unknown-text">未知</span>';
 
+        // 如果是停运时段，使用灰色
+        const iconColor = isOffService ? '#64748b' : color;
+
         // 创建带颜色的小人图标
         let icons = '';
         for (let i = 0; i < count; i++) {
-            icons += `<i class="fas fa-male" style="color: ${color}"></i>`;
+            icons += `<i class="fas fa-male" style="color: ${iconColor}"></i>`;
         }
 
         return icons;
@@ -105,15 +122,21 @@ export function renderStationList(stations, containerId, stationsData) {
         // 计算客流百分比用于进度条
         const passengerPercentage = Math.min(100, Math.floor((stationData.passengers / 2000) * 100));
 
+        // 检查是否为停运状态
+        const isOffService = stationData.isOffService || false;
+        const displayLevel = isOffService ? '已停运' : stationData.congestion.level;
+        const displayColor = isOffService ? '#64748b' : stationData.congestion.color;
+        const passengerPercentageDisplay = isOffService ? 0 : passengerPercentage; // 停运时进度条为0
+
         // 获取带颜色的小人图标
-        const peopleIcons = getPeopleIcons(stationData.congestion.level, stationData.congestion.color);
+        const peopleIcons = getPeopleIcons(displayLevel, displayColor);
 
         stationItem.innerHTML = `
             <div class="station-header">
                 <div class="station-number">${index + 1} .</div>
                 <div class="station-name">${stationData.stationName}</div>
-                <div class="congestion-badge" style="background: ${stationData.congestion.color}">
-                    ${stationData.congestion.emoji || ''} ${stationData.congestion.level}
+                <div class="congestion-badge" style="background: ${displayColor}">
+                    ${isOffService ? '🌙' : (stationData.congestion.emoji || '')} ${displayLevel}
                 </div>
             </div>
             <div class="station-details">
@@ -122,7 +145,7 @@ export function renderStationList(stations, containerId, stationsData) {
                     <span class="passenger-level-icons">${peopleIcons}</span>
                 </div>
                 <div class="passenger-indicator">
-                    <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${stationData.congestion.color}"></div>
+                    <div class="passenger-level" style="width: ${passengerPercentageDisplay}%; background: ${displayColor}"></div>
                 </div>
             </div>
         `;

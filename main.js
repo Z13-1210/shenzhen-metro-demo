@@ -5,7 +5,7 @@
  * 职责：初始化应用，协调各模块
  */
 import {loadLinesData} from './modules/dataLoader.js'
-import {renderLineList} from './modules/lineList.js'
+// renderLineList 已移除，因未在后续代码中使用
 import {renderStationList, sortStationsByPassengers, sortStationsDefault, sortStationsReverse} from './modules/stationList.js'
 import {realtimeDataService} from './modules/realtimeData.js'
 import Heatmap from './modules/heatmap.js'
@@ -93,7 +93,7 @@ function showLoadingScreen() {
             
             .loading-text {
                 color: white;
-font-size: 1.2rem;
+                font-size: 1.2rem;
                 font-weight: 500;
             }
         `;
@@ -166,11 +166,10 @@ function updateTime() {
 }
 
 // 更新指定线路的实时数据
-function updateRealtimeDataForLine(line) {
+async function updateRealtimeDataForLine(line) {
     if (!line || !line.stations) return;
 
-    // 计算每个站点的实时数据
-    const stationsData = line.stations.map((station, index) => {
+    const promises = line.stations.map(async (station, index) => {
         let stationName;
         if (typeof station === 'string') {
             stationName = station;
@@ -180,7 +179,7 @@ function updateRealtimeDataForLine(line) {
             stationName = String(station);
         }
 
-        return realtimeDataService.calculateStationPassengers(
+        return await realtimeDataService.calculateStationPassengers(
             stationName,
             line.name,
             index,
@@ -188,13 +187,12 @@ function updateRealtimeDataForLine(line) {
         );
     });
 
-    // 保存实时数据
+    const stationsData = await Promise.all(promises);
+
     realtimeData[line.id] = stationsData;
 
-    // 更新站点列表显示
     renderStationList(line.stations, 'station-list', stationsData);
 
-    // 更新热力图
     if (heatmap) {
         heatmap.draw(stationsData, line);
     }
@@ -202,28 +200,25 @@ function updateRealtimeDataForLine(line) {
 
 // 开始实时更新
 function startRealtimeUpdates() {
-    // 清除已有定时器
     if (updateInterval) clearInterval(updateInterval);
 
     console.log('启动实时更新，当前视图:', currentView);
 
-    // 每1秒更新一次数据
-    updateInterval = setInterval(() => {
+    updateInterval = setInterval(async () => {
         if (currentView === 'line' && currentSelectedLine) {
-            // 线路视图：更新线路数据
-            updateRealtimeDataForLine(currentSelectedLine);
+            await updateRealtimeDataForLine(currentSelectedLine);
         } else if (currentView === 'station' && currentDisplayedStation) {
-            // 单站点视图：只更新数据部分，不重建整个DOM
-            updateSingleStationData();
+            await updateSingleStationData();
         }
     }, 1000);
 
-    // 立即更新一次
-    if (currentView === 'line' && currentSelectedLine) {
-        updateRealtimeDataForLine(currentSelectedLine);
-    } else if (currentView === 'station' && currentDisplayedStation) {
-        updateSingleStationData();
-    }
+    (async () => {
+        if (currentView === 'line' && currentSelectedLine) {
+            await updateRealtimeDataForLine(currentSelectedLine);
+        } else if (currentView === 'station' && currentDisplayedStation) {
+            await updateSingleStationData();
+        }
+    })();
 }
 // 更新页面标题
 function updatePageTitle(lineName, lineColor) {
@@ -237,24 +232,21 @@ function updatePageTitle(lineName, lineColor) {
 }
 
 // 计算单站点客流（提取为独立函数以便复用）
-function calculateSingleStationPassengers(stationInfo) {
+async function calculateSingleStationPassengers(stationInfo) {
     const realtimeService = realtimeDataService;
     let totalPassengers = 0;
     let calculatedStations = 0;
 
-    // 遍历该站点的所有线路
     if (stationInfo.lines && stationInfo.lines.length > 0) {
-        stationInfo.lines.forEach((line) => {
-            // 获取线路信息
+        const promises = stationInfo.lines.map(async (line) => {
             const lineInfo = currentLines.find(l =>
                 l.id === line.id || l.name === line.name
             );
 
             if (!lineInfo || !lineInfo.stations) {
-                return;
+                return 0;
             }
 
-            // 找到该站点在线路中的索引
             let stationIndex = -1;
 
             for (let i = 0; i < lineInfo.stations.length; i++) {
@@ -277,23 +269,27 @@ function calculateSingleStationPassengers(stationInfo) {
 
             if (stationIndex !== -1) {
                 try {
-                    const stationData = realtimeService.calculateStationPassengers(
+                    const stationData = await realtimeService.calculateStationPassengers(
                         stationInfo.name,
                         lineInfo.name,
                         stationIndex,
                         lineInfo.stations.length
                     );
 
-                    totalPassengers += stationData.passengers || 0;
-                    calculatedStations++;
+                    return stationData.passengers || 0;
                 } catch (error) {
                     console.error('计算客流时出错:', error);
+                    return 0;
                 }
             }
+            return 0;
         });
+
+        const results = await Promise.all(promises);
+        totalPassengers = results.reduce((sum, val) => sum + val, 0);
+        calculatedStations = results.filter(val => val > 0).length;
     }
 
-    // 如果没有找到任何线路数据，使用默认值
     if (calculatedStations === 0) {
         totalPassengers = Math.floor(Math.random() * 800) + 200;
     }
@@ -303,6 +299,11 @@ function calculateSingleStationPassengers(stationInfo) {
 
 // 辅助函数：根据客流人数计算拥堵等级
 function calculateCongestion(passengers) {
+    // 只有在客流量为0时才显示停运状态
+    if (passengers === 0) {
+        return { level: '已停运', color: '#64748b', emoji: '🌙' };
+    }
+
     if (passengers <= 200) {
         return { level: '畅通', color: '#10b981', emoji: '😌' };
     } else if (passengers <= 500) {
@@ -318,6 +319,15 @@ function calculateCongestion(passengers) {
 
 // 辅助函数：根据拥堵等级获取带颜色的小人图标
 function getPeopleIcons(level, color) {
+    // 如果是停运状态，显示灰色小人
+    if (level === '已停运') {
+        let icons = '';
+        for (let i = 0; i < 1; i++) {
+            icons += `<i class="fas fa-male" style="color: #64748b"></i>`;
+        }
+        return icons;
+    }
+
     const mapping = {
         '畅通': 1,
         '舒适': 2,
@@ -339,15 +349,14 @@ function getPeopleIcons(level, color) {
 }
 
 // 更新单站点的实时数据（不重建整个HTML）
-function updateSingleStationData() {
+async function updateSingleStationData() {
     if (!currentDisplayedStation) {
         return;
     }
 
     console.log('更新单站点实时数据:', currentDisplayedStation.name);
 
-    // 重新计算客流
-    const totalPassengers = calculateSingleStationPassengers(currentDisplayedStation);
+    const totalPassengers = await calculateSingleStationPassengers(currentDisplayedStation);
 
     console.log(`站点 ${currentDisplayedStation.name} 更新客流: ${totalPassengers}`);
 
@@ -357,11 +366,18 @@ function updateSingleStationData() {
     const congestionColor = congestion.color;
     const congestionEmoji = congestion.emoji;
 
+    // 检查是否为停运状态
+    const isOffService = totalPassengers === 0 && congestionLevel === '已停运';
+    const displayLevel = isOffService ? '已停运' : congestionLevel;
+    const displayColor = isOffService ? '#64748b' : congestionColor;
+    const displayEmoji = isOffService ? '🌙' : congestionEmoji;
+
     // 计算客流百分比（用于进度条显示）
     const passengerPercentage = Math.min(100, Math.floor((totalPassengers / 2500) * 100));
+    const passengerPercentageDisplay = isOffService ? 0 : passengerPercentage; // 停运时进度条为0
 
     // 获取带颜色的小人图标
-    const peopleIcons = getPeopleIcons(congestionLevel, congestionColor);
+    const peopleIcons = getPeopleIcons(displayLevel, displayColor);
 
     // 更新DOM元素
     const stationContainer = document.getElementById('station-list');
@@ -369,16 +385,15 @@ function updateSingleStationData() {
 
     const stationItem = stationContainer.querySelector('.station-item');
     if (!stationItem) {
-        // 如果没有站点项，调用完整显示函数
-        showSingleStationOnly(currentDisplayedStation);
+        await showSingleStationOnly(currentDisplayedStation);
         return;
     }
 
     // 更新拥堵徽章
     const congestionBadge = stationItem.querySelector('.congestion-badge');
     if (congestionBadge) {
-        congestionBadge.style.background = congestionColor;
-        congestionBadge.innerHTML = `${congestionEmoji} ${congestionLevel}`;
+        congestionBadge.style.background = displayColor;
+        congestionBadge.innerHTML = `${displayEmoji} ${displayLevel}`;
     }
 
     // 更新小人图标
@@ -390,32 +405,28 @@ function updateSingleStationData() {
     // 更新进度条
     const passengerLevel = stationItem.querySelector('.passenger-level');
     if (passengerLevel) {
-        passengerLevel.style.width = `${passengerPercentage}%`;
-        passengerLevel.style.background = congestionColor;
+        passengerLevel.style.width = `${passengerPercentageDisplay}%`;
+        passengerLevel.style.background = displayColor;
     }
 }
 
-function showSingleStationOnly(stationInfo) {
+async function showSingleStationOnly(stationInfo) {
     console.log('显示单个站点信息（搜索功能）:', stationInfo);
 
     const stationContainer = document.getElementById('station-list');
     if (!stationContainer) return;
 
-    // 设置视图为单站点视图
     currentView = 'station';
     currentDisplayedStation = stationInfo;
 
-    // 隐藏排序按钮（单站点视图不需要排序）
     const sortControls = document.querySelector('.sort-dropdown');
     if (sortControls) {
         sortControls.style.display = 'none';
     }
 
-    // 更新页面标题为站点名称和线路信息
     updateStationPageTitle(stationInfo);
 
-    // 计算客流
-    const totalPassengers = calculateSingleStationPassengers(stationInfo);
+    const totalPassengers = await calculateSingleStationPassengers(stationInfo);
 
     console.log(`站点 ${stationInfo.name} 总客流: ${totalPassengers}`);
 
@@ -428,8 +439,15 @@ function showSingleStationOnly(stationInfo) {
     // 计算客流百分比（用于进度条显示）
     const passengerPercentage = Math.min(100, Math.floor((totalPassengers / 2500) * 100));
 
+    // 检查是否为停运状态
+    const isOffService = totalPassengers === 0 && congestionLevel === '已停运';
+    const displayLevel = isOffService ? '已停运' : congestionLevel;
+    const displayColor = isOffService ? '#64748b' : congestionColor;
+    const displayEmoji = isOffService ? '🌙' : congestionEmoji;
+    const passengerPercentageDisplay = isOffService ? 0 : passengerPercentage; // 停运时进度条为0
+
     // 获取带颜色的小人图标
-    const peopleIcons = getPeopleIcons(congestionLevel, congestionColor);
+    const peopleIcons = getPeopleIcons(displayLevel, displayColor);
 
     // 生成线路标识
     let lineBadgesHTML = '';
@@ -463,9 +481,9 @@ function showSingleStationOnly(stationInfo) {
     stationItem.innerHTML = `
         <div class="station-header">
             <div class="station-name">${stationInfo.name}</div>
-            <div class="congestion-badge" style="background: ${congestionColor}">
+            <div class="congestion-badge" style="background: ${displayColor}">
 
-                ${congestionEmoji} ${congestionLevel}
+                ${displayEmoji} ${displayLevel}
             </div>
         </div>
         <div class="station-details">
@@ -474,7 +492,7 @@ function showSingleStationOnly(stationInfo) {
                 <span class="passenger-level-icons">${peopleIcons}</span>
             </div>
             <div class="passenger-indicator">
-                <div class="passenger-level" style="width: ${passengerPercentage}%; background: ${congestionColor}"></div>
+                <div class="passenger-level" style="width: ${passengerPercentageDisplay}%; background: ${displayColor}"></div>
             </div>
             ${lineBadgesHTML}
             ${passengerSourceInfo}
@@ -683,21 +701,18 @@ function initSearch() {
             // 为搜索结果添加点击事件
             const searchResultItems = searchResults.querySelectorAll('.search-result-item[data-lines]');
             searchResultItems.forEach(item => {
-                item.addEventListener('click', () => {
+                item.addEventListener('click', async () => {
                     const lineIds = item.getAttribute('data-lines').split(',').map(id => parseInt(id));
                     const stationName = item.getAttribute('data-station');
 
-                    // 找到对应的所有线路
                     const lines = currentLines.filter(l => lineIds.includes(l.id));
                     if (lines.length > 0) {
-                        // 显示单个站点信息，传入所有线路
-                        showSingleStationOnly({
+                        await showSingleStationOnly({
                             name: stationName,
                             lines: lines,
-                            color: lines[0].color // 使用第一条线路的颜色
+                            color: lines[0].color
                         });
 
-                        // 清空搜索框和结果
                         clearSearch();
                     }
                 });
@@ -720,7 +735,6 @@ function addDynamicStyles() {
             padding: 5px 15px;
             font-weight: 600;
             margin-left: 10px;
-            color: #000;
         }   
         
         .dark-mode .current-line{
@@ -1021,12 +1035,9 @@ function updateLineOptions() {
         lineOption.style.borderLeft = `4px solid ${line.color}`;
         lineOption.style.marginBottom = '2px';
 
-        // 添加点击事件
-        lineOption.addEventListener('click', () => {
-            // 选中线路
-            selectLine(line);
+        lineOption.addEventListener('click', async () => {
+            await selectLine(line);
             
-            // 隐藏下拉菜单
             const lineDropdown = document.querySelector('.line-dropdown');
             if (lineDropdown) {
                 lineDropdown.classList.remove('active');
@@ -1050,28 +1061,23 @@ function updateLineOptionsActiveState(selectedLine) {
 }
 
 // 选择线路
-function selectLine(line) {
+async function selectLine(line) {
     if (!line) return;
     
     currentSelectedLine = line;
     currentView = 'line';
 
-    // 显示排序按钮（线路视图需要排序）
     const sortControls = document.querySelector('.sort-dropdown');
     if (sortControls) {
         sortControls.style.display = 'flex';
     }
 
-    // 立即更新实时数据并渲染站点列表
-    updateRealtimeDataForLine(line);
+    await updateRealtimeDataForLine(line);
 
-    // 更新页面标题
     updatePageTitle(line.name, line.color);
 
-    // 清空搜索框和结果
     clearSearch();
     
-    // 更新线路列表中的活动状态
     updateLineListActiveState(line);
 }
 
@@ -1112,44 +1118,38 @@ async function initApp() {
 
         console.log(`成功加载 ${currentLines.length} 条线路数据`);
 
-        // 4. 初始化热力图模块（新增）
+        realtimeDataService.setLinesData(currentLines);
+
+        // 4. 初始化热力图模块
         initHeatmap();
 
-        // 5. 初始化热力图模块（新增）
-        initHeatmap();
-
-        // 6. 初始化搜索功能
+        // 5. 初始化搜索功能
         initSearch();
 
-        // 7. 初始化排序功能
+        // 6. 初始化排序功能
         initSortControls();
-        
-        // 8. 初始化线路选择功能
+
+        // 7. 初始化线路选择功能
         initLineControls();
 
-        // 9. 默认选择第一条线路并渲染其站点信息
+        // 8. 默认选择第一条线路并渲染其站点信息
         if (currentLines.length > 0) {
             const firstLine = currentLines[0];
             currentSelectedLine = firstLine;
             currentView = 'line';
-            
-            // 显示排序按钮
+
             const sortControls = document.querySelector('.sort-dropdown');
             if (sortControls) {
                 sortControls.style.display = 'flex';
             }
-            
-            // 立即更新实时数据并渲染站点列表
-            updateRealtimeDataForLine(firstLine);
-            
-            // 更新页面标题
+
+            await updateRealtimeDataForLine(firstLine);
+
             updatePageTitle(firstLine.name, firstLine.color);
-            
-            // 更新线路下拉菜单中的活动状态
+
             updateLineOptionsActiveState(firstLine);
         }
 
-        // 10. 开始实时更新
         startRealtimeUpdates();
 
         // 10. 添加移动端触摸支持
